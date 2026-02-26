@@ -27,7 +27,9 @@ const HARD_REMOVE_FIELDS = [
     'if', 'then', 'else', 'dependencies', 'dependentSchemas',
     'dependentRequired', 'cache_control', 'contentEncoding',
     'contentMediaType', 'deprecated', 'readOnly', 'writeOnly',
-    'format'  // Added - Gemini doesn't support format
+    'format',  // Added - Gemini doesn't support format
+    'patternProperties', 'prefixItems', 'unevaluatedProperties',
+    'unevaluatedItems', '$comment', '$vocabulary',  // JSON Schema 2020-12 fields
 ]
 
 /**

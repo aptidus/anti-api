@@ -348,6 +348,14 @@
                 class="tab-btn px-5 py-2 rounded-lg font-bold text-sm transition-all duration-200 text-gray-400 hover:text-gray-200">
                 Settings
             </button>
+            <button onclick="switchTab('keys')" id="tab-keys"
+                class="tab-btn px-5 py-2 rounded-lg font-bold text-sm transition-all duration-200 text-gray-400 hover:text-gray-200">
+                🔑 Keys
+            </button>
+            <a href="/api-docs.pdf" target="_blank"
+                class="px-5 py-2 rounded-lg font-bold text-sm text-gray-500 hover:text-blue-400 transition-all duration-200">
+                📄 Docs
+            </a>
         </div>
 
         <!-- Toast -->
@@ -560,7 +568,8 @@
                         class="flex items-center justify-between p-4 rounded-xl border border-gray-800 hover:border-gray-700 transition-colors cursor-pointer">
                         <div>
                             <div class="text-gray-200 font-medium">Auto Refresh Quota</div>
-                            <div class="text-gray-500 text-xs mt-0.5">Automatically refresh quota and usage every 10 minutes</div>
+                            <div class="text-gray-500 text-xs mt-0.5">Automatically refresh quota and usage every 10
+                                minutes</div>
                         </div>
                         <input type="checkbox" id="setting-auto-refresh" class="toggle-switch" checked>
                     </label>
@@ -612,7 +621,8 @@
                         class="flex items-center justify-between p-4 rounded-xl border border-gray-800 hover:border-gray-700 transition-colors cursor-pointer">
                         <div>
                             <div class="text-gray-200 font-medium">Optimize Quota Sorting</div>
-                            <div class="text-gray-500 text-xs mt-0.5">Sort cards by remaining quota within each provider</div>
+                            <div class="text-gray-500 text-xs mt-0.5">Sort cards by remaining quota within each provider
+                            </div>
                         </div>
                         <input type="checkbox" id="setting-optimize-quota-sort" class="toggle-switch">
                     </label>
@@ -651,6 +661,59 @@
 
             <div class="mt-6 text-gray-600 text-xs">
                 Settings are saved to ~/.anti-api/settings.json. Click Save to apply changes.
+            </div>
+        </div>
+
+        <!-- ==================== KEYS TAB ==================== -->
+        <div id="tab-content-keys" class="tab-content hidden">
+            <div class="mb-6">
+                <h1 class="text-2xl font-bold text-gray-300">API Keys</h1>
+                <p class="text-gray-500 text-sm font-bold mt-1">Manage API keys for accessing the proxy. Usage is
+                    tracked per-key.</p>
+            </div>
+
+            <!-- Create Key -->
+            <div class="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50 mb-6">
+                <h3 class="text-sm font-bold text-gray-400 mb-3">Create New Key</h3>
+                <div class="flex gap-3">
+                    <input id="new-key-label" type="text" placeholder="Label (e.g. Cursor, Claude Code, Ben's laptop)"
+                        class="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-sm text-gray-200 outline-none focus:border-blue-500" />
+                    <button onclick="createApiKey()"
+                        class="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm rounded-lg transition-all">
+                        Generate Key
+                    </button>
+                </div>
+                <div id="new-key-result" class="mt-3 hidden">
+                    <div class="bg-green-900/30 border border-green-700/50 rounded-lg p-4">
+                        <p class="text-green-400 text-xs font-bold mb-2">⚠️ Copy this key now — it won't be shown again!
+                        </p>
+                        <div class="flex items-center gap-2">
+                            <code id="new-key-value"
+                                class="flex-1 text-green-300 text-sm bg-gray-900 rounded px-3 py-2 break-all"></code>
+                            <button onclick="copyNewKey()"
+                                class="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm text-gray-300 transition-all">Copy</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Admin Key Info -->
+            <div class="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50 mb-6">
+                <h3 class="text-sm font-bold text-gray-400 mb-2">Admin Key</h3>
+                <p class="text-gray-500 text-xs">Set via <code class="text-gray-400">ANTI_API_SECRET</code> environment
+                    variable. This key always has full access and cannot be revoked from the dashboard.</p>
+            </div>
+
+            <!-- Keys List -->
+            <div class="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-sm font-bold text-gray-400">Generated Keys</h3>
+                    <button onclick="loadApiKeys()"
+                        class="text-xs text-gray-500 hover:text-gray-300 transition-colors">↻ Refresh</button>
+                </div>
+                <div id="keys-list">
+                    <p class="text-gray-500 text-sm">Loading...</p>
+                </div>
             </div>
         </div>
 
@@ -717,7 +780,7 @@
     </div>
 
     <script>
-        const API_BASE = 'http://localhost:8964';
+        const API_BASE = window.location.origin;
         const CODEX_SESSION_KEY = 'anti-api-codex-session';
         let loadingDismissed = false;
         let codexPopup = null;
@@ -1055,6 +1118,10 @@
             } else {
                 stopLogStream();
             }
+
+            if (tabName === 'keys') {
+                loadApiKeys();
+            }
         }
 
         function loadRemoteContent() {
@@ -1063,6 +1130,95 @@
                 iframe.src = '/remote-panel';
             }
             remoteLoaded = true;
+        }
+
+        // ==================== API KEY MANAGEMENT ====================
+        async function createApiKey() {
+            const labelInput = document.getElementById('new-key-label');
+            const label = labelInput.value.trim() || 'Untitled';
+            try {
+                const res = await fetch(`${API_BASE}/keys/create`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ label }),
+                });
+                const data = await res.json();
+                if (data.success) {
+                    const resultDiv = document.getElementById('new-key-result');
+                    const valueEl = document.getElementById('new-key-value');
+                    valueEl.textContent = data.key.key;
+                    resultDiv.classList.remove('hidden');
+                    labelInput.value = '';
+                    loadApiKeys();
+                } else {
+                    alert('Failed to create key: ' + (data.error || 'Unknown error'));
+                }
+            } catch (e) {
+                alert('Error creating key: ' + e.message);
+            }
+        }
+
+        function copyNewKey() {
+            const key = document.getElementById('new-key-value').textContent;
+            navigator.clipboard.writeText(key);
+            showSettingsToast('Key copied to clipboard');
+        }
+
+        async function loadApiKeys() {
+            const listEl = document.getElementById('keys-list');
+            if (!listEl) return;
+            try {
+                const res = await fetch(`${API_BASE}/keys/list`);
+                const data = await res.json();
+                if (!data.success || !data.keys.length) {
+                    listEl.innerHTML = '<p class="text-gray-500 text-sm">No generated keys yet. Create one above.</p>';
+                    return;
+                }
+                listEl.innerHTML = data.keys.map(k => `
+                    <div class="flex items-center justify-between py-3 border-b border-gray-700/50 last:border-0">
+                        <div class="flex-1">
+                            <span class="text-gray-200 font-semibold text-sm">${escapeHtml(k.label)}</span>
+                            <div class="flex items-center gap-3 mt-1">
+                                <code class="text-gray-500 text-xs">${k.maskedKey}</code>
+                                <span class="text-gray-600 text-xs">${k.requestCount} requests</span>
+                                <span class="text-gray-600 text-xs">${k.lastUsed ? 'Last used: ' + new Date(k.lastUsed).toLocaleDateString() : 'Never used'}</span>
+                            </div>
+                        </div>
+                        <button onclick="deleteApiKey('${k.key}')"
+                            class="px-3 py-1.5 text-red-400 hover:bg-red-900/30 rounded-lg text-xs font-bold transition-all">
+                            Revoke
+                        </button>
+                    </div>
+                `).join('');
+            } catch (e) {
+                listEl.innerHTML = '<p class="text-red-400 text-sm">Failed to load keys</p>';
+            }
+        }
+
+        async function deleteApiKey(key) {
+            if (!confirm('Revoke this API key? This cannot be undone.')) return;
+            try {
+                const res = await fetch(`${API_BASE}/keys/delete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key }),
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showSettingsToast('Key revoked');
+                    loadApiKeys();
+                } else {
+                    alert('Failed to revoke: ' + (data.message || 'Unknown error'));
+                }
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
         }
 
         function loadRoutingContent() {
@@ -1437,7 +1593,9 @@
         }
 
         async function deleteAccount(accountId, displayName) {
-            if (!confirm(`Remove account "${displayName}"?`)) return;
+            // Use custom modal instead of native confirm() which gets dismissed by page events
+            const confirmed = await showConfirmModal(`Remove account "${displayName}"?`);
+            if (!confirmed) return;
 
             try {
                 const response = await fetch(`${API_BASE}/accounts/${encodeURIComponent(accountId)}`, {
@@ -1454,6 +1612,26 @@
             } catch (error) {
                 showToast(`Error: ${error.message}`);
             }
+        }
+
+        function showConfirmModal(message) {
+            return new Promise((resolve) => {
+                const overlay = document.createElement('div');
+                overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:9999';
+                overlay.innerHTML = `
+                    <div style="background:#1e1e2e;border:1px solid #444;border-radius:12px;padding:24px;max-width:400px;width:90%;text-align:center;">
+                        <p style="color:#e0e0e0;font-size:14px;margin:0 0 20px">${message}</p>
+                        <div style="display:flex;gap:12px;justify-content:center">
+                            <button id="confirm-cancel" style="padding:8px 24px;background:#333;color:#aaa;border:none;border-radius:8px;cursor:pointer;font-weight:bold;font-size:13px">Cancel</button>
+                            <button id="confirm-ok" style="padding:8px 24px;background:#dc2626;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:bold;font-size:13px">Remove</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(overlay);
+                overlay.querySelector('#confirm-cancel').onclick = () => { overlay.remove(); resolve(false); };
+                overlay.querySelector('#confirm-ok').onclick = () => { overlay.remove(); resolve(true); };
+                overlay.onclick = (e) => { if (e.target === overlay) { overlay.remove(); resolve(false); } };
+            });
         }
 
         function renderAccountCard(account) {
@@ -1843,6 +2021,28 @@
                         setAddAccountStatus(`Imported Codex: ${first.email || first.id || 'Codex'}`);
                     }
                     closeAddAccountModal();
+                } else if (provider === 'antigravity' && data.auth_url) {
+                    // Railway flow: open Google login, then ask user to paste redirect URL
+                    window.open(data.auth_url, '_blank');
+                    setAddAccountStatus('');
+                    const statusEl = document.getElementById('add-account-status');
+                    statusEl.classList.remove('hidden');
+                    statusEl.innerHTML = `
+                        <div style="text-align:left;font-size:13px;line-height:1.6">
+                            <p style="margin-bottom:8px"><strong>Steps:</strong></p>
+                            <p>1. Sign in with Google in the new tab</p>
+                            <p>2. After signing in, the page will show an error (this is normal)</p>
+                            <p>3. Copy the <strong>full URL</strong> from your browser's address bar</p>
+                            <p style="margin-top:8px">Paste the URL here:</p>
+                            <input id="oauth-paste-url" type="text" placeholder="http://localhost:51121/oauth-callback?code=..." 
+                                style="width:100%;padding:8px 12px;margin-top:6px;background:#1a1a2e;border:1px solid #333;border-radius:8px;color:#fff;font-size:13px;outline:none" />
+                            <button onclick="submitOAuthCode()" 
+                                style="width:100%;margin-top:8px;padding:8px;background:#4ade80;color:#000;border:none;border-radius:8px;font-weight:bold;cursor:pointer">
+                                Authenticate
+                            </button>
+                        </div>
+                    `;
+                    return;
                 } else {
                     setAddAccountStatus(`Connected: ${data.email || data.id || provider}`);
                     closeAddAccountModal();
@@ -1851,6 +2051,35 @@
                 refreshAll(true);
             } catch (error) {
                 setAddAccountStatus(`Authentication error: ${error.message}`);
+            }
+        }
+
+        async function submitOAuthCode() {
+            const input = document.getElementById('oauth-paste-url');
+            const url = input?.value?.trim();
+            if (!url) {
+                setAddAccountStatus('Please paste the redirect URL');
+                return;
+            }
+            setAddAccountStatus('Authenticating...');
+            try {
+                const response = await fetch(`${API_BASE}/auth/exchange`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ redirect_url: url })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    setAddAccountStatus(`✓ Connected: ${data.email}`);
+                    setTimeout(() => {
+                        closeAddAccountModal();
+                        refreshAll(true);
+                    }, 1000);
+                } else {
+                    setAddAccountStatus(`Error: ${data.error || 'Authentication failed'}`);
+                }
+            } catch (error) {
+                setAddAccountStatus(`Error: ${error.message}`);
             }
         }
 

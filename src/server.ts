@@ -28,6 +28,7 @@ import { authStore } from "./services/auth/store"
 import { formatLogTime, getRequestLogContext } from "./lib/logger"
 import { initLogCapture, setLogCaptureEnabled } from "./lib/log-buffer"
 import { getUsage, resetUsage } from "./services/usage-tracker"
+import { isValidKey, recordKeyUsage, createKey, deleteKey, listKeys, getKeyLabel } from "./services/api-keys"
 
 export const server = new Hono()
 
@@ -65,6 +66,92 @@ server.use(async (c, next) => {
 })
 server.use(cors())
 
+// API key authentication middleware
+const API_SECRET = process.env.ANTI_API_SECRET
+if (API_SECRET) {
+    server.use(async (c, next) => {
+        const path = c.req.path
+
+        // Always public
+        if (path === "/health" || path === "/oauth-callback") {
+            return next()
+        }
+
+        // API endpoints: require Bearer token or x-api-key header
+        if (path.startsWith("/v1/") || path.startsWith("/v1beta/") || path.startsWith("/v1internal") || path === "/messages") {
+            const authHeader = c.req.header("Authorization") || ""
+            const bearerToken = authHeader.replace(/^Bearer\s+/i, "").trim()
+            const xApiKey = c.req.header("x-api-key") || ""
+            const token = bearerToken || xApiKey
+            if (!isValidKey(token)) {
+                return c.json({ error: { message: "Invalid API key", type: "authentication_error" } }, 401)
+            }
+            // Track key usage and store label for per-key usage tracking
+            recordKeyUsage(token)
+                ; (globalThis as any).__currentApiKey = getKeyLabel(token) || token
+            return next()
+        }
+
+        // Dashboard & admin routes: check cookie or ?key= param
+        const dashboardPaths = ["/", "/quota", "/api-docs.pdf", "/remote-panel", "/routing", "/settings", "/logs"]
+        const isDashboard = dashboardPaths.some(p => path === p || path.startsWith(p + "/"))
+        const isApi = path.startsWith("/auth/") || path.startsWith("/remote/") || path.startsWith("/routing/")
+            || path.startsWith("/accounts") || path.startsWith("/quota/") || path.startsWith("/bundle/")
+            || path.startsWith("/usage") || path.startsWith("/tunnel/") || path.startsWith("/logs/")
+            || path.startsWith("/keys/")
+
+        if (isDashboard || isApi) {
+            // Check cookie
+            const cookie = c.req.header("Cookie") || ""
+            const match = cookie.match(/anti_api_session=([^;]+)/)
+            if (match && match[1] === API_SECRET) {
+                return next()
+            }
+
+            // Check ?key= query param (sets cookie for future visits)
+            const keyParam = new URL(c.req.url).searchParams.get("key")
+            if (keyParam === API_SECRET) {
+                c.header("Set-Cookie", `anti_api_session=${API_SECRET}; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000`)
+                return next()
+            }
+
+            // Unauthorized
+            return c.html(`<html><body style="font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;background:#1a1a2e;color:#fff;flex-direction:column">
+                <h1>🔒 Access Denied</h1>
+                <p style="color:#888">Add <code>?key=YOUR_SECRET</code> to the URL to access the dashboard.</p>
+            </body></html>`, 401)
+        }
+
+        return next()
+    })
+}
+
+// API Key Management Routes
+server.get("/keys/list", async (c) => {
+    return c.json({ success: true, keys: listKeys() })
+})
+
+server.post("/keys/create", async (c) => {
+    try {
+        const body = await c.req.json() as { label?: string }
+        const entry = createKey(body.label || "Untitled")
+        return c.json({ success: true, key: entry })
+    } catch (error) {
+        return c.json({ success: false, error: (error as Error).message }, 500)
+    }
+})
+
+server.post("/keys/delete", async (c) => {
+    try {
+        const body = await c.req.json() as { key: string }
+        if (!body.key) return c.json({ success: false, error: "Missing key" }, 400)
+        const deleted = deleteKey(body.key)
+        return c.json({ success: deleted, message: deleted ? "Key deleted" : "Key not found" })
+    } catch (error) {
+        return c.json({ success: false, error: (error as Error).message }, 500)
+    }
+})
+
 // 启动时自动加载已保存的认证
 initAuth()
 accountManager.load()
@@ -83,6 +170,76 @@ server.get("/", (c) => c.redirect("/quota"))
 
 // Auth 路由
 server.route("/auth", authRouter)
+
+// OAuth callback - handles Google OAuth redirect on the main server port (required for Railway)
+server.get("/oauth-callback", async (c) => {
+    const code = c.req.query("code")
+    const returnedState = c.req.query("state")
+    const error = c.req.query("error")
+
+    if (error) {
+        return c.html(`<html><body><h1>Authentication Failed</h1><p>${error}</p><p>You can close this tab.</p></body></html>`)
+    }
+
+    if (!code || !returnedState) {
+        return c.html(`<html><body><h1>Invalid Callback</h1><p>Missing code or state.</p></body></html>`)
+    }
+
+    const pendingState = (globalThis as any).__pendingOAuthState
+    if (!pendingState || returnedState !== pendingState) {
+        return c.html(`<html><body><h1>State Mismatch</h1><p>OAuth state mismatch. Please try again.</p></body></html>`)
+    }
+
+    try {
+        const { exchangeCode, fetchUserInfo, getProjectID } = await import("./services/antigravity/oauth")
+        const { saveAuth } = await import("./services/antigravity/login")
+        const { generateMockProjectId } = await import("./services/antigravity/project-id")
+        const { state } = await import("./lib/state")
+
+        const redirectUri = (globalThis as any).__pendingOAuthRedirectUri
+        const tokens = await exchangeCode(code, redirectUri)
+        const userInfo = await fetchUserInfo(tokens.accessToken)
+        const projectId = await getProjectID(tokens.accessToken)
+        const resolvedProjectId = projectId || generateMockProjectId()
+
+        // Save to state
+        state.accessToken = tokens.accessToken
+        state.antigravityToken = tokens.accessToken
+        state.refreshToken = tokens.refreshToken
+        state.tokenExpiresAt = Date.now() + tokens.expiresIn * 1000
+        state.userEmail = userInfo.email
+        state.userName = userInfo.email.split("@")[0]
+        state.cloudaicompanionProject = resolvedProjectId
+        saveAuth()
+
+        // Register account
+        accountManager.load()
+        accountManager.addAccount({
+            id: userInfo.email,
+            email: userInfo.email,
+            accessToken: tokens.accessToken,
+            refreshToken: tokens.refreshToken,
+            expiresAt: Date.now() + tokens.expiresIn * 1000,
+            projectId: resolvedProjectId,
+        })
+
+            // Clear pending state
+            ; (globalThis as any).__pendingOAuthState = null
+            ; (globalThis as any).__pendingOAuthRedirectUri = null
+
+        consola.success(`✓ OAuth login successful: ${userInfo.email}`)
+
+        return c.html(`<html><body style="font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;background:#1a1a2e;color:#fff;flex-direction:column">
+            <h1 style="color:#4ade80">✓ Authentication Successful</h1>
+            <p>Logged in as <strong>${userInfo.email}</strong></p>
+            <p style="color:#888">You can close this tab and return to the dashboard.</p>
+            <script>setTimeout(() => window.close(), 3000)</script>
+        </body></html>`)
+    } catch (err) {
+        consola.error("OAuth callback error:", err)
+        return c.html(`<html><body><h1>Authentication Error</h1><p>${(err as Error).message}</p></body></html>`)
+    }
+})
 
 // Remote 隧道控制路由
 server.route("/remote", remoteRouter)
@@ -204,6 +361,19 @@ server.get("/quota", async (c) => {
         return c.html(html)
     } catch (error) {
         return c.text("Quota dashboard not found", 404)
+    }
+})
+
+// API Documentation PDF Download
+server.get("/api-docs.pdf", async (c) => {
+    try {
+        const pdfPath = join(import.meta.dir, "../public/api-docs.pdf")
+        const pdf = readFileSync(pdfPath)
+        c.header("Content-Type", "application/pdf")
+        c.header("Content-Disposition", 'attachment; filename="anti-api-docs.pdf"')
+        return c.body(pdf)
+    } catch (error) {
+        return c.text("PDF not found", 404)
     }
 })
 
@@ -360,6 +530,84 @@ server.post("/responses", (c) => c.json({
 server.post("/v1/responses", (c) => c.json({
     error: { type: "not_supported", message: "Responses API not supported" }
 }, 501))
+
+// ==================== NATIVE ANTIGRAVITY PASSTHROUGH ====================
+// Transparent proxy for OpenClaw, Claude Code, etc.
+// Accepts native Antigravity/Gemini request format, injects stored OAuth token,
+// forwards to Google as-is. Tools, streaming, everything works identically.
+server.all("/v1internal*", async (c) => {
+    const path = c.req.path
+    if (!path.startsWith("/v1internal:streamGenerateContent")) {
+        return c.json({ error: { message: "Not found", type: "invalid_request" } }, 404)
+    }
+    if (c.req.method !== "POST") {
+        return c.json({ error: { message: "Method not allowed", type: "invalid_request" } }, 405)
+    }
+    const ANTIGRAVITY_BASE_URLS = [
+        "https://daily-cloudcode-pa.googleapis.com",
+        "https://daily-cloudcode-pa.sandbox.googleapis.com",
+        "https://cloudcode-pa.googleapis.com",
+    ]
+    const ENDPOINT = "/v1internal:streamGenerateContent"
+
+    try {
+        // Get a valid account with OAuth token
+        const account = await accountManager.getNextAvailableAccount()
+        if (!account) {
+            return c.json({ error: { message: "No Antigravity account available", type: "server_error" } }, 503)
+        }
+
+        const requestBody = await c.req.text()
+        const altParam = c.req.query("alt") || "sse"
+        const { getAntigravityUserAgent } = require("./lib/antigravity-client")
+        const userAgent = getAntigravityUserAgent()
+
+        // Try each base URL until one works
+        let lastError: any = null
+        for (const baseUrl of ANTIGRAVITY_BASE_URLS) {
+            const url = `${baseUrl}${ENDPOINT}?alt=${altParam}`
+            try {
+                const response = await fetch(url, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${account.accessToken}`,
+                        "User-Agent": userAgent,
+                        "Accept": altParam === "sse" ? "text/event-stream" : "application/json",
+                    },
+                    body: requestBody,
+                })
+
+                if (!response.ok && response.status >= 500) {
+                    lastError = await response.text()
+                    continue // Try next endpoint
+                }
+
+                // Stream the response back to client
+                const headers: Record<string, string> = {}
+                response.headers.forEach((value, key) => {
+                    if (key.toLowerCase() !== "transfer-encoding") {
+                        headers[key] = value
+                    }
+                })
+
+                if (account.accountId) accountManager.markSuccess(account.accountId)
+
+                return new Response(response.body, {
+                    status: response.status,
+                    headers,
+                })
+            } catch (err) {
+                lastError = err
+                continue
+            }
+        }
+
+        return c.json({ error: { message: `All Antigravity endpoints failed: ${lastError}`, type: "upstream_error" } }, 502)
+    } catch (error: any) {
+        return c.json({ error: { message: error.message, type: "server_error" } }, 500)
+    }
+})
 
 // 健康检查
 server.get("/health", (c) => c.json({

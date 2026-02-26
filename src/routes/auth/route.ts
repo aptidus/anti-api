@@ -131,28 +131,23 @@ authRouter.post("/login", async (c) => {
 
         // 默认 Antigravity
         if (!body.accessToken) {
-            const result = await startOAuthLogin()
-            if (result.success) {
-                accountManager.load()
-                if (state.accessToken && state.refreshToken) {
-                    accountManager.addAccount({
-                        id: state.userEmail || `account-${Date.now()}`,
-                        email: state.userEmail || "unknown",
-                        accessToken: state.accessToken,
-                        refreshToken: state.refreshToken,
-                        expiresAt: state.tokenExpiresAt || 0,
-                        projectId: state.cloudaicompanionProject,
-                    })
-                }
-                return c.json({
-                    success: true,
-                    authenticated: true,
-                    provider: "antigravity",
-                    email: result.email,
-                })
-            } else {
-                return c.json({ success: false, error: result.error }, 400)
-            }
+            // Railway-compatible flow: use localhost redirect (the only URI Google allows),
+            // then have user paste the redirect URL back
+            const { generateState, generateAuthURL } = await import("~/services/antigravity/oauth")
+            const oauthState = generateState()
+            const redirectUri = "http://localhost:51121/oauth-callback"
+            const authUrl = generateAuthURL(redirectUri, oauthState)
+
+                // Store pending oauth state for the exchange endpoint
+                ; (globalThis as any).__pendingOAuthState = oauthState
+                ; (globalThis as any).__pendingOAuthRedirectUri = redirectUri
+
+            return c.json({
+                success: true,
+                status: "pending",
+                provider: "antigravity",
+                auth_url: authUrl,
+            })
         }
 
         setAuth(body.accessToken, body.refreshToken, body.email, body.name)
@@ -219,6 +214,80 @@ authRouter.get("/codex/debug", async (c) => {
     try {
         const result = await debugCodexOAuth()
         return c.json({ success: true, ...result })
+    } catch (error) {
+        return c.json({ success: false, error: (error as Error).message }, 500)
+    }
+})
+
+// Exchange OAuth code for tokens (Railway code-paste flow)
+authRouter.post("/exchange", async (c) => {
+    try {
+        const body = await c.req.json() as { redirect_url?: string; code?: string; state?: string }
+
+        let code = body.code
+        let returnedState = body.state
+
+        // Parse code+state from pasted redirect URL if provided
+        if (body.redirect_url) {
+            try {
+                const url = new URL(body.redirect_url)
+                code = url.searchParams.get("code") || undefined
+                returnedState = url.searchParams.get("state") || undefined
+            } catch {
+                return c.json({ success: false, error: "Invalid URL" }, 400)
+            }
+        }
+
+        if (!code) {
+            return c.json({ success: false, error: "No authorization code found" }, 400)
+        }
+
+        const pendingState = (globalThis as any).__pendingOAuthState
+        if (pendingState && returnedState && returnedState !== pendingState) {
+            return c.json({ success: false, error: "State mismatch" }, 400)
+        }
+
+        const { exchangeCode, fetchUserInfo, getProjectID } = await import("~/services/antigravity/oauth")
+        const { saveAuth } = await import("~/services/antigravity/login")
+        const { generateMockProjectId } = await import("~/services/antigravity/project-id")
+
+        const redirectUri = (globalThis as any).__pendingOAuthRedirectUri || "http://localhost:51121/oauth-callback"
+        const tokens = await exchangeCode(code, redirectUri)
+        const userInfo = await fetchUserInfo(tokens.accessToken)
+        const projectId = await getProjectID(tokens.accessToken)
+        const resolvedProjectId = projectId || generateMockProjectId()
+
+        // Save to state
+        state.accessToken = tokens.accessToken
+        state.antigravityToken = tokens.accessToken
+        state.refreshToken = tokens.refreshToken
+        state.tokenExpiresAt = Date.now() + tokens.expiresIn * 1000
+        state.userEmail = userInfo.email
+        state.userName = userInfo.email.split("@")[0]
+        state.cloudaicompanionProject = resolvedProjectId
+        saveAuth()
+
+        // Register account
+        accountManager.load()
+        accountManager.addAccount({
+            id: userInfo.email,
+            email: userInfo.email,
+            accessToken: tokens.accessToken,
+            refreshToken: tokens.refreshToken,
+            expiresAt: Date.now() + tokens.expiresIn * 1000,
+            projectId: resolvedProjectId,
+        })
+
+            // Clear pending state
+            ; (globalThis as any).__pendingOAuthState = null
+            ; (globalThis as any).__pendingOAuthRedirectUri = null
+
+        return c.json({
+            success: true,
+            authenticated: true,
+            provider: "antigravity",
+            email: userInfo.email,
+        })
     } catch (error) {
         return c.json({ success: false, error: (error as Error).message }, 500)
     }

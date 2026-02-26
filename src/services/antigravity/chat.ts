@@ -406,16 +406,12 @@ function buildSafetySettings(): any[] {
 }
 
 function buildSystemInstruction(): any {
-    const antigravityIdentity = `You are Antigravity, a powerful agentic AI coding assistant designed by the Google Deepmind team working on Advanced Agentic Coding.
-You are pair programming with a USER to solve their coding task. The task may require creating a new codebase, modifying or debugging an existing codebase, or simply answering a question.
-**Absolute paths only**
-**Proactiveness**`
-
+    // No identity injection — OpenClaw provides its own system prompt
+    // via IDENTITY.md, SOUL.md, and AGENTS.md workspace files
     return {
         role: "user",
         parts: [
-            { text: antigravityIdentity },
-            { text: "\n--- [SYSTEM_PROMPT_END] ---" }
+            { text: "Follow the user's instructions carefully. Be concise and precise." },
         ]
     }
 }

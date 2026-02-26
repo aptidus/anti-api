@@ -25,10 +25,16 @@ interface DailyUsage {
     output: number
 }
 
+interface KeyUsage {
+    models: Record<string, ModelUsage>
+    daily: DailyUsage[]
+}
+
 interface UsageData {
     lastUpdated: string
     models: Record<string, ModelUsage>
-    daily: DailyUsage[]  // Last 7 days
+    daily: DailyUsage[]
+    byKey?: Record<string, KeyUsage>
 }
 
 // In-memory cache
@@ -106,40 +112,55 @@ function getTodayString(): string {
     return `${year}-${month}-${day}`
 }
 
-// Record usage (fire-and-forget, non-blocking)
-export function recordUsage(model: string, inputTokens: number, outputTokens: number): void {
-    if (!model || (inputTokens <= 0 && outputTokens <= 0)) return
-
-    // Update model totals
-    const existing = usageCache.models[model] || { input: 0, output: 0 }
-    usageCache.models[model] = {
+// Helper: update a models+daily pair with usage
+function addUsageToStore(
+    models: Record<string, ModelUsage>,
+    daily: DailyUsage[],
+    model: string,
+    inputTokens: number,
+    outputTokens: number,
+    requestCost: number
+): void {
+    const existing = models[model] || { input: 0, output: 0 }
+    models[model] = {
         input: existing.input + inputTokens,
         output: existing.output + outputTokens,
     }
+    const today = getTodayString()
+    const idx = daily.findIndex(d => d.date === today)
+    if (idx >= 0) {
+        daily[idx].cost += requestCost
+        daily[idx].input += inputTokens
+        daily[idx].output += outputTokens
+    } else {
+        daily.push({ date: today, cost: requestCost, input: inputTokens, output: outputTokens })
+        if (daily.length > 14) daily.splice(0, daily.length - 14)
+    }
+}
 
-    // Calculate cost for this request
+// Record usage (fire-and-forget, non-blocking)
+export function recordUsage(model: string, inputTokens: number, outputTokens: number, apiKey?: string): void {
+    if (!model || (inputTokens <= 0 && outputTokens <= 0)) return
+
+    // Auto-read API key from middleware context if not explicitly passed
+    const resolvedKey = apiKey || (globalThis as any).__currentApiKey || undefined
+
     const provider = detectProvider(model)
     const pricing = PRICING[provider]
     const requestCost = (inputTokens / 1_000_000) * pricing.input + (outputTokens / 1_000_000) * pricing.output
 
-    // Update daily tracking
-    const today = getTodayString()
-    const dailyIndex = usageCache.daily.findIndex(d => d.date === today)
-    if (dailyIndex >= 0) {
-        usageCache.daily[dailyIndex].cost += requestCost
-        usageCache.daily[dailyIndex].input += inputTokens
-        usageCache.daily[dailyIndex].output += outputTokens
-    } else {
-        usageCache.daily.push({
-            date: today,
-            cost: requestCost,
-            input: inputTokens,
-            output: outputTokens,
-        })
-        // Keep only last 14 days
-        if (usageCache.daily.length > 14) {
-            usageCache.daily = usageCache.daily.slice(-14)
+    // Update global totals
+    addUsageToStore(usageCache.models, usageCache.daily, model, inputTokens, outputTokens, requestCost)
+
+    // Update per-key totals
+    if (resolvedKey) {
+        if (!usageCache.byKey) usageCache.byKey = {}
+        const keyLabel = resolvedKey.length > 8 ? resolvedKey.slice(0, 4) + "..." + resolvedKey.slice(-4) : resolvedKey
+        if (!usageCache.byKey[keyLabel]) {
+            usageCache.byKey[keyLabel] = { models: {}, daily: [] }
         }
+        const keyStore = usageCache.byKey[keyLabel]
+        addUsageToStore(keyStore.models, keyStore.daily, model, inputTokens, outputTokens, requestCost)
     }
 
     scheduleSave()
@@ -158,22 +179,8 @@ function calculateCost(model: string, usage: ModelUsage): { inputCost: number; o
     }
 }
 
-// Get usage statistics
-export function getUsage(): {
-    lastUpdated: string
-    today: string
-    models: Array<{
-        model: string
-        input: number
-        output: number
-        inputCost: number
-        outputCost: number
-        cost: number
-    }>
-    totalCost: number
-    daily: Array<{ date: string; cost: number; input: number; output: number }>
-} {
-    const models = Object.entries(usageCache.models).map(([model, usage]) => {
+function buildModelStats(models: Record<string, ModelUsage>) {
+    const result = Object.entries(models).map(([model, usage]) => {
         const costs = calculateCost(model, usage)
         return {
             model,
@@ -184,23 +191,44 @@ export function getUsage(): {
             cost: costs.total,
         }
     })
+    result.sort((a, b) => b.cost - a.cost)
+    return result
+}
 
-    // Sort by cost descending
-    models.sort((a, b) => b.cost - a.cost)
+function buildDailyStats(daily: DailyUsage[]) {
+    return daily.map(d => ({
+        date: d.date,
+        cost: Math.round(d.cost * 100) / 100,
+        input: Math.round(d.input || 0),
+        output: Math.round(d.output || 0),
+    }))
+}
 
+// Get usage statistics
+export function getUsage() {
+    const models = buildModelStats(usageCache.models)
     const totalCost = models.reduce((sum, m) => sum + m.cost, 0)
+
+    // Build per-key stats
+    const byKey: Record<string, { models: typeof models; totalCost: number; daily: ReturnType<typeof buildDailyStats> }> = {}
+    if (usageCache.byKey) {
+        for (const [key, keyData] of Object.entries(usageCache.byKey)) {
+            const keyModels = buildModelStats(keyData.models)
+            byKey[key] = {
+                models: keyModels,
+                totalCost: Math.round(keyModels.reduce((s, m) => s + m.cost, 0) * 100) / 100,
+                daily: buildDailyStats(keyData.daily),
+            }
+        }
+    }
 
     return {
         lastUpdated: usageCache.lastUpdated,
         today: getTodayString(),
         models,
         totalCost: Math.round(totalCost * 100) / 100,
-        daily: usageCache.daily.map(d => ({
-            date: d.date,
-            cost: Math.round(d.cost * 100) / 100,
-            input: Math.round(d.input || 0),
-            output: Math.round(d.output || 0),
-        })),
+        daily: buildDailyStats(usageCache.daily),
+        byKey,
     }
 }
 

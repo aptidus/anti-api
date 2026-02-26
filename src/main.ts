@@ -54,7 +54,7 @@ const start = defineCommand({
     args: {
         port: {
             type: "string",
-            default: "8964",
+            default: process.env.PORT || "8964",
             description: "监听端口",
             alias: "p",
         },

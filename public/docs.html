@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anti-API Documentation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0f;
+            color: #e0e0e0;
+            line-height: 1.7;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: #fff;
+        }
+
+        .subtitle {
+            color: #888;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            font-size: 20px;
+            font-weight: 600;
+            color: #fff;
+            margin: 36px 0 14px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #222;
+        }
+
+        h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #ccc;
+            margin: 20px 0 10px;
+        }
+
+        p,
+        li {
+            margin-bottom: 10px;
+            color: #bbb;
+            font-size: 14px;
+        }
+
+        ul,
+        ol {
+            padding-left: 24px;
+            margin-bottom: 14px;
+        }
+
+        li {
+            margin-bottom: 6px;
+        }
+
+        code {
+            background: #1a1a2e;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 13px;
+            color: #7dd3fc;
+        }
+
+        pre {
+            background: #111122;
+            border: 1px solid #222;
+            border-radius: 8px;
+            padding: 16px;
+            overflow-x: auto;
+            margin: 10px 0 18px;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 12.5px;
+            line-height: 1.6;
+            color: #ccc;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0 18px;
+            font-size: 13px;
+        }
+
+        th {
+            background: #151525;
+            color: #aaa;
+            text-align: left;
+            padding: 10px 14px;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 10px 14px;
+            border-bottom: 1px solid #1a1a2e;
+        }
+
+        tr:hover td {
+            background: #111120;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .badge-claude {
+            background: #3b1d5e;
+            color: #c084fc;
+        }
+
+        .badge-gemini {
+            background: #1a3a2e;
+            color: #6ee7b7;
+        }
+
+        .badge-gpt {
+            background: #2a2a1a;
+            color: #fbbf24;
+        }
+
+        .badge-think {
+            background: #1a2a3e;
+            color: #7dd3fc;
+            font-size: 10px;
+            margin-left: 4px;
+        }
+
+        .tip {
+            background: #0d1a2d;
+            border-left: 3px solid #3b82f6;
+            padding: 12px 16px;
+            border-radius: 0 6px 6px 0;
+            margin: 14px 0;
+            font-size: 13px;
+            color: #93c5fd;
+        }
+
+        .warn {
+            background: #2d1a0d;
+            border-left: 3px solid #f59e0b;
+            padding: 12px 16px;
+            border-radius: 0 6px 6px 0;
+            margin: 14px 0;
+            font-size: 13px;
+            color: #fcd34d;
+        }
+
+        .step {
+            background: #111;
+            border-radius: 8px;
+            padding: 14px 18px;
+            margin: 10px 0;
+            border: 1px solid #222;
+        }
+
+        .step-num {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            line-height: 24px;
+            text-align: center;
+            background: #3b82f6;
+            color: #fff;
+            border-radius: 50%;
+            font-size: 12px;
+            font-weight: 700;
+            margin-right: 10px;
+        }
+
+        a {
+            color: #7dd3fc;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        hr {
+            border: none;
+            border-top: 1px solid #1a1a2e;
+            margin: 36px 0;
+        }
+
+        /* Language toggle */
+        .lang-toggle {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 30px;
+        }
+
+        .lang-btn {
+            padding: 6px 16px;
+            border-radius: 6px;
+            border: 1px solid #333;
+            background: transparent;
+            color: #888;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .lang-btn.active {
+            background: #3b82f6;
+            color: #fff;
+            border-color: #3b82f6;
+        }
+
+        .lang-btn:hover {
+            border-color: #555;
+        }
+
+        .cn {
+            display: none;
+        }
+
+        @media print {
+            body {
+                background: #fff;
+                color: #111;
+                padding: 20px;
+            }
+
+            pre {
+                background: #f5f5f5;
+                border-color: #ddd;
+                color: #333;
+            }
+
+            code {
+                background: #eee;
+                color: #0066cc;
+            }
+
+            th {
+                background: #eee;
+                color: #333;
+            }
+
+            td {
+                border-color: #ddd;
+            }
+
+            .tip {
+                background: #e8f0fe;
+                border-color: #1a73e8;
+                color: #174ea6;
+            }
+
+            .warn {
+                background: #fef7e0;
+                border-color: #ea8600;
+                color: #8a6200;
+            }
+
+            .step {
+                background: #f8f8f8;
+                border-color: #ddd;
+            }
+
+            .lang-toggle {
+                display: none;
+            }
+
+            h1,
+            h2,
+            h3,
+            p,
+            li,
+            td {
+                color: #111;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+
+        <h1>Anti-API Documentation</h1>
+
+        <div class="lang-toggle">
+            <button class="lang-btn active" onclick="setLang('en')">English</button>
+            <button class="lang-btn" onclick="setLang('cn')">中文</button>
+        </div>
+
+        <!-- ============ BASE URL ============ -->
+        <div class="en">
+            <p class="subtitle">OpenAI-compatible proxy for Antigravity models — works with OpenClaw, Claude Code,
+                Cursor, and any OpenAI-compatible client.</p>
+            <h2>Base URL &amp; Authentication</h2>
+            <p>All requests use this base URL and require an API key:</p>
+        </div>
+        <div class="cn">
+            <p class="subtitle">兼容 OpenAI 的 Antigravity 模型代理 — 适用于 OpenClaw、Claude Code、Cursor 及任何 OpenAI 兼容客户端。</p>
+            <h2>基础地址 &amp; 认证</h2>
+            <p>所有请求使用以下基础地址，并需要 API 密钥：</p>
+        </div>
+        <pre>Base URL: https://anti-api-proxy-production.up.railway.app/v1
+API Key:  Authorization: Bearer ak-YOUR_API_KEY</pre>
+
+        <!-- ============ MODELS ============ -->
+        <div class="en">
+            <h2>Available Models</h2>
+        </div>
+        <div class="cn">
+            <h2>可用模型</h2>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Model ID</th>
+                    <th><span class="en">Provider</span><span class="cn">提供商</span></th>
+                    <th><span class="en">Capabilities</span><span class="cn">特点</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>claude-opus-4-6-thinking</code></td>
+                    <td><span class="badge badge-claude">Claude</span></td>
+                    <td><span class="en">Best reasoning</span><span class="cn">最强推理</span> <span
+                            class="badge badge-think">thinking</span></td>
+                </tr>
+                <tr>
+                    <td><code>claude-opus-4-5-thinking</code></td>
+                    <td><span class="badge badge-claude">Claude</span></td>
+                    <td><span class="en">Strong reasoning</span><span class="cn">强推理</span> <span
+                            class="badge badge-think">thinking</span></td>
+                </tr>
+                <tr>
+                    <td><code>claude-sonnet-4-6-thinking</code></td>
+                    <td><span class="badge badge-claude">Claude</span></td>
+                    <td><span class="en">Fast reasoning</span><span class="cn">快速推理</span> <span
+                            class="badge badge-think">thinking</span></td>
+                </tr>
+                <tr>
+                    <td><code>claude-sonnet-4-6</code></td>
+                    <td><span class="badge badge-claude">Claude</span></td>
+                    <td><span class="en">Fast, latest</span><span class="cn">快速，最新</span></td>
+                </tr>
+                <tr>
+                    <td><code>claude-sonnet-4-5-thinking</code></td>
+                    <td><span class="badge badge-claude">Claude</span></td>
+                    <td><span class="en">Balanced reasoning</span><span class="cn">平衡推理</span> <span
+                            class="badge badge-think">thinking</span></td>
+                </tr>
+                <tr>
+                    <td><code>claude-sonnet-4-5</code></td>
+                    <td><span class="badge badge-claude">Claude</span></td>
+                    <td><span class="en">Balanced</span><span class="cn">平衡性能</span></td>
+                </tr>
+                <tr>
+                    <td><code>gemini-3-1-pro-high</code></td>
+                    <td><span class="badge badge-gemini">Gemini</span></td>
+                    <td><span class="en">Latest Gemini, highest quality</span><span class="cn">最新 Gemini，最高质量</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td><code>gemini-3-pro-high</code></td>
+                    <td><span class="badge badge-gemini">Gemini</span></td>
+                    <td><span class="en">High quality</span><span class="cn">高质量</span></td>
+                </tr>
+                <tr>
+                    <td><code>gemini-3-pro-low</code></td>
+                    <td><span class="badge badge-gemini">Gemini</span></td>
+                    <td><span class="en">Efficient</span><span class="cn">高效</span></td>
+                </tr>
+                <tr>
+                    <td><code>gemini-3-flash</code></td>
+                    <td><span class="badge badge-gemini">Gemini</span></td>
+                    <td><span class="en">Ultra-fast</span><span class="cn">极速</span></td>
+                </tr>
+                <tr>
+                    <td><code>gemini-3-flash-thinking</code></td>
+                    <td><span class="badge badge-gemini">Gemini</span></td>
+                    <td><span class="en">Fast reasoning</span><span class="cn">快速推理</span> <span
+                            class="badge badge-think">thinking</span></td>
+                </tr>
+                <tr>
+                    <td><code>gpt-oss-120b</code></td>
+                    <td><span class="badge badge-gpt">GPT</span></td>
+                    <td><span class="en">Open-source, large</span><span class="cn">开源大模型</span></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <hr>
+
+        <!-- ============ OPENCLAW SETUP ============ -->
+        <div class="en">
+            <h2>🦞 OpenClaw Setup (Step-by-Step)</h2>
+            <p>Follow these steps to connect OpenClaw to Anti-API:</p>
+
+            <div class="step">
+                <span class="step-num">1</span><strong>Install OpenClaw</strong> (if not already installed)
+                <pre>npm install -g openclaw</pre>
+            </div>
+
+            <div class="step">
+                <span class="step-num">2</span><strong>Open your config file</strong>
+                <pre>nano ~/.openclaw/openclaw.json</pre>
+                <p>If the file doesn't exist yet, create it. If it already has content, merge the following into your
+                    existing config.</p>
+            </div>
+
+            <div class="step">
+                <span class="step-num">3</span><strong>Add the Anti-API provider</strong>
+                <p>Paste this into your <code>openclaw.json</code>. Replace <code>ak-YOUR_KEY</code> with your actual
+                    API key:</p>
+                <pre>{
+  "models": {
+    "mode": "merge",
+    "providers": {
+      "anti-api": {
+        "baseUrl": "https://anti-api-proxy-production.up.railway.app/v1",
+        "apiKey": "ak-YOUR_KEY",
+        "api": "openai-completions",
+        "models": [
+          { "id": "claude-opus-4-6-thinking", "name": "Claude Opus 4.6 Thinking", "reasoning": true },
+          { "id": "claude-opus-4-5-thinking", "name": "Claude Opus 4.5 Thinking", "reasoning": true },
+          { "id": "claude-sonnet-4-6", "name": "Claude Sonnet 4.6" },
+          { "id": "claude-sonnet-4-5", "name": "Claude Sonnet 4.5" },
+          { "id": "gemini-3-1-pro-high", "name": "Gemini 3.1 Pro High" },
+          { "id": "gemini-3-flash", "name": "Gemini 3 Flash" }
+        ]
+      }
+    }
+  },
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "anti-api/claude-opus-4-6-thinking"
+      }
+    }
+  }
+}</pre>
+            </div>
+
+            <div class="step">
+                <span class="step-num">4</span><strong>Restart the gateway</strong>
+                <pre>openclaw gateway restart</pre>
+            </div>
+
+            <div class="step">
+                <span class="step-num">5</span><strong>Verify it works</strong>
+                <pre>openclaw agent --local -m "Hello, what model are you?" --session-id test --json</pre>
+                <p>You should see <code>"provider": "anti-api"</code> in the output.</p>
+            </div>
+
+            <div class="tip">
+                <strong>✅ Tools work natively.</strong> OpenClaw's built-in tools (file read/write, web search, process,
+                etc.) work out of the box with all Anti-API models — no extra configuration needed.
+            </div>
+        </div>
+
+        <div class="cn">
+            <h2>🦞 OpenClaw 配置教程（分步指南）</h2>
+            <p>按以下步骤将 OpenClaw 连接到 Anti-API：</p>
+
+            <div class="step">
+                <span class="step-num">1</span><strong>安装 OpenClaw</strong>（如果尚未安装）
+                <pre>npm install -g openclaw</pre>
+            </div>
+
+            <div class="step">
+                <span class="step-num">2</span><strong>打开配置文件</strong>
+                <pre>nano ~/.openclaw/openclaw.json</pre>
+                <p>如果文件不存在，请创建它。如果已有内容，请合并以下配置。</p>
+            </div>
+
+            <div class="step">
+                <span class="step-num">3</span><strong>添加 Anti-API 提供商</strong>
+                <p>将以下内容粘贴到 <code>openclaw.json</code> 中，将 <code>ak-YOUR_KEY</code> 替换为你的 API 密钥：</p>
+                <pre>{
+  "models": {
+    "mode": "merge",
+    "providers": {
+      "anti-api": {
+        "baseUrl": "https://anti-api-proxy-production.up.railway.app/v1",
+        "apiKey": "ak-YOUR_KEY",
+        "api": "openai-completions",
+        "models": [
+          { "id": "claude-opus-4-6-thinking", "name": "Claude Opus 4.6 Thinking", "reasoning": true },
+          { "id": "claude-opus-4-5-thinking", "name": "Claude Opus 4.5 Thinking", "reasoning": true },
+          { "id": "claude-sonnet-4-6", "name": "Claude Sonnet 4.6" },
+          { "id": "claude-sonnet-4-5", "name": "Claude Sonnet 4.5" },
+          { "id": "gemini-3-1-pro-high", "name": "Gemini 3.1 Pro High" },
+          { "id": "gemini-3-flash", "name": "Gemini 3 Flash" }
+        ]
+      }
+    }
+  },
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "anti-api/claude-opus-4-6-thinking"
+      }
+    }
+  }
+}</pre>
+            </div>
+
+            <div class="step">
+                <span class="step-num">4</span><strong>重启网关</strong>
+                <pre>openclaw gateway restart</pre>
+            </div>
+
+            <div class="step">
+                <span class="step-num">5</span><strong>验证是否生效</strong>
+                <pre>openclaw agent --local -m "Hello, what model are you?" --session-id test --json</pre>
+                <p>输出中应包含 <code>"provider": "anti-api"</code>。</p>
+            </div>
+
+            <div class="tip">
+                <strong>✅ 工具原生支持。</strong>OpenClaw 内置工具（文件读写、网页搜索、进程管理等）可直接使用，无需额外配置。
+            </div>
+        </div>
+
+        <hr>
+
+        <!-- ============ CLAUDE CODE SETUP ============ -->
+        <div class="en">
+            <h2>🤖 Claude Code Setup (Step-by-Step)</h2>
+            <p>Follow these steps to connect Claude Code to Anti-API:</p>
+
+            <div class="step">
+                <span class="step-num">1</span><strong>Install Claude Code</strong> (if not already installed)
+                <pre>npm install -g @anthropic-ai/claude-code</pre>
+            </div>
+
+            <div class="step">
+                <span class="step-num">2</span><strong>Set environment variables</strong>
+                <p>Add these to your shell config (<code>~/.zshrc</code> or <code>~/.bashrc</code>):</p>
+                <pre>export ANTHROPIC_BASE_URL="https://anti-api-proxy-production.up.railway.app"
+export ANTHROPIC_API_KEY="ak-YOUR_KEY"</pre>
+                <p>Then reload your shell:</p>
+                <pre>source ~/.zshrc</pre>
+            </div>
+
+            <div class="step">
+                <span class="step-num">3</span><strong>Set your preferred model</strong>
+                <pre>claude config set --global model claude-opus-4-6-thinking</pre>
+                <p>Or use any model from the list above.</p>
+            </div>
+
+            <div class="step">
+                <span class="step-num">4</span><strong>Test it</strong>
+                <pre>claude -p "Hello, what model are you?"</pre>
+                <p>You should receive a response from the model.</p>
+            </div>
+
+            <div class="step">
+                <span class="step-num">5</span><strong>Test with tools</strong>
+                <pre>claude -p "Read the file package.json and tell me the project name"</pre>
+                <p>Claude Code should use the file-read tool and return the project details.</p>
+            </div>
+
+            <div class="tip">
+                <strong>✅ All Claude Code tools work.</strong> File editing, bash commands, web search — everything
+                works through the proxy exactly as with a native Anthropic API key.
+            </div>
+
+            <div class="warn">
+                <strong>Note:</strong> Do NOT set <code>ANTHROPIC_BASE_URL</code> with a trailing <code>/v1</code>.
+                Claude Code adds its own path. The correct value is the root URL without <code>/v1</code>.
+            </div>
+        </div>
+
+        <div class="cn">
+            <h2>🤖 Claude Code 配置教程（分步指南）</h2>
+            <p>按以下步骤将 Claude Code 连接到 Anti-API：</p>
+
+            <div class="step">
+                <span class="step-num">1</span><strong>安装 Claude Code</strong>（如果尚未安装）
+                <pre>npm install -g @anthropic-ai/claude-code</pre>
+            </div>
+
+            <div class="step">
+                <span class="step-num">2</span><strong>设置环境变量</strong>
+                <p>将以下内容添加到你的 shell 配置文件（<code>~/.zshrc</code> 或 <code>~/.bashrc</code>）：</p>
+                <pre>export ANTHROPIC_BASE_URL="https://anti-api-proxy-production.up.railway.app"
+export ANTHROPIC_API_KEY="ak-YOUR_KEY"</pre>
+                <p>然后重新加载 shell：</p>
+                <pre>source ~/.zshrc</pre>
+            </div>
+
+            <div class="step">
+                <span class="step-num">3</span><strong>设置首选模型</strong>
+                <pre>claude config set --global model claude-opus-4-6-thinking</pre>
+                <p>也可以使用上方模型列表中的任何模型。</p>
+            </div>
+
+            <div class="step">
+                <span class="step-num">4</span><strong>测试基本对话</strong>
+                <pre>claude -p "Hello, what model are you?"</pre>
+                <p>你应该收到模型的回复。</p>
+            </div>
+
+            <div class="step">
+                <span class="step-num">5</span><strong>测试工具调用</strong>
+                <pre>claude -p "Read the file package.json and tell me the project name"</pre>
+                <p>Claude Code 应该会使用文件读取工具并返回项目信息。</p>
+            </div>
+
+            <div class="tip">
+                <strong>✅ 所有工具都可用。</strong>文件编辑、bash 命令、网页搜索 — 通过代理使用与原生 Anthropic API 完全相同。
+            </div>
+
+            <div class="warn">
+                <strong>注意：</strong><code>ANTHROPIC_BASE_URL</code> 末尾不要加 <code>/v1</code>。
+                Claude Code 会自动添加路径。正确值是不带 <code>/v1</code> 的根 URL。
+            </div>
+        </div>
+
+        <hr>
+
+        <!-- ============ OTHER TOOLS ============ -->
+        <div class="en">
+            <h2>🔧 Cursor / Continue.dev / Other Tools</h2>
+            <p>Any tool with "OpenAI-compatible" or "Custom OpenAI" support works. Use these settings:</p>
+        </div>
+        <div class="cn">
+            <h2>🔧 Cursor / Continue.dev / 其他工具</h2>
+            <p>任何支持 "OpenAI 兼容" 的工具都可以使用。设置如下：</p>
+        </div>
+        <table>
+            <tr>
+                <th><span class="en">Setting</span><span class="cn">设置项</span></th>
+                <th><span class="en">Value</span><span class="cn">值</span></th>
+            </tr>
+            <tr>
+                <td>Base URL</td>
+                <td><code>https://anti-api-proxy-production.up.railway.app/v1</code></td>
+            </tr>
+            <tr>
+                <td>API Key</td>
+                <td><code>ak-YOUR_KEY</code></td>
+            </tr>
+            <tr>
+                <td>Model</td>
+                <td><code>claude-opus-4-6-thinking</code></td>
+            </tr>
+        </table>
+
+        <hr>
+
+        <!-- ============ API REFERENCE ============ -->
+        <div class="en">
+            <h2>API Reference</h2>
+        </div>
+        <div class="cn">
+            <h2>API 接口参考</h2>
+        </div>
+
+        <h3>POST /v1/chat/completions</h3>
+        <pre>curl https://anti-api-proxy-production.up.railway.app/v1/chat/completions \
+  -H "Authorization: Bearer ak-YOUR_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "claude-opus-4-6-thinking",
+    "messages": [{"role": "user", "content": "Hello!"}],
+    "max_tokens": 1024,
+    "stream": false
+  }'</pre>
+
+        <div class="en">
+            <p>Set <code>"stream": true</code> for SSE streaming responses.</p>
+        </div>
+        <div class="cn">
+            <p>设置 <code>"stream": true</code> 可启用 SSE 流式响应。</p>
+        </div>
+
+        <h3>GET /v1/models</h3>
+        <div class="en">
+            <p>Returns a list of all available models.</p>
+        </div>
+        <div class="cn">
+            <p>返回所有可用模型列表。</p>
+        </div>
+
+        <h3>POST /messages</h3>
+        <div class="en">
+            <p>Anthropic Messages API format (used by Claude Code).</p>
+        </div>
+        <div class="cn">
+            <p>Anthropic Messages API 格式（Claude Code 使用）。</p>
+        </div>
+
+        <hr>
+
+        <div class="en">
+            <h2>Tool Calling</h2>
+            <p>All models support OpenAI-style function/tool calling. The proxy automatically cleans unsupported JSON
+                Schema fields (like <code>patternProperties</code>, <code>$ref</code>,
+                <code>additionalProperties</code>) so your existing tool schemas work without modification.
+            </p>
+        </div>
+        <div class="cn">
+            <h2>工具调用</h2>
+            <p>所有模型都支持 OpenAI 风格的函数/工具调用。代理会自动清理不支持的 JSON Schema 字段（如
+                <code>patternProperties</code>、<code>$ref</code>、<code>additionalProperties</code>），你现有的工具 schema
+                无需修改即可使用。
+            </p>
+        </div>
+
+        <hr>
+        <p style="text-align:center; color:#555; font-size:12px; margin-top:40px;">
+            Anti-API v2.6.0
+        </p>
+
+    </div>
+
+    <script>
+        function setLang(lang) {
+            document.querySelectorAll('.en').forEach(el => {
+                el.style.display = lang === 'en' ? (el.tagName === 'SPAN' ? 'inline' : '') : 'none';
+            });
+            document.querySelectorAll('.cn').forEach(el => {
+                el.style.display = lang === 'cn' ? (el.tagName === 'SPAN' ? 'inline' : '') : 'none';
+            });
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.textContent.includes(lang === 'en' ? 'English' : '中文'));
+            });
+        }
+        // Default: English
+        setLang('en');
+    </script>
+</body>
+
+</html>

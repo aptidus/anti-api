@@ -1,5 +1,4 @@
-ARG BUN_IMAGE=ghcr.io/oven-sh/bun:1.1.38
-FROM ${BUN_IMAGE}
+FROM oven/bun:1.1.38
 
 WORKDIR /app
 

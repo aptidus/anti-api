@@ -24,6 +24,7 @@ export interface RequestLogContext {
     provider?: string
     account?: string
     routeTag?: string
+    apiKey?: string
 }
 
 let lastRequestContext: RequestLogContext = {}
