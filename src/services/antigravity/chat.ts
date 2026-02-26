@@ -290,6 +290,28 @@ function buildAntigravityParts(content: ClaudeMessage["content"], toolIdToName: 
             continue
         }
 
+        // URL-based images (Anthropic format: source.type === "url")
+        if (block.type === "image" && (block as any).source?.type === "url") {
+            parts.push({
+                fileData: {
+                    mimeType: (block as any).source.media_type || "image/jpeg",
+                    fileUri: (block as any).source.url,
+                },
+            })
+            continue
+        }
+
+        // Document blocks (PDFs, etc.) — Anthropic format
+        if ((block as any).type === "document" && (block as any).source?.type === "base64") {
+            parts.push({
+                inlineData: {
+                    mimeType: (block as any).source.media_type || "application/pdf",
+                    data: (block as any).source.data,
+                },
+            })
+            continue
+        }
+
         if (block.type === "tool_use") {
             const toolId = block.id || generateToolUseId()
             const toolName = block.name || toolId
@@ -434,22 +456,28 @@ function claudeToAntigravity(
     const sessionId = generateStableSessionId(messages)
     const projectId = state.cloudaicompanionProject || "unknown"
 
+    const generationConfig: any = {
+        maxOutputTokens: 64000,
+        stopSequences: ["\n\nHuman:", "[DONE]"],
+    }
+
+    // Enable thinking output for thinking models
+    if (model.includes("thinking")) {
+        generationConfig.thinkingConfig = {
+            thinkingBudget: 10000,
+        }
+    }
+
     const innerRequest: any = {
         contents,
         sessionId,
         safetySettings: buildSafetySettings(),
         systemInstruction: buildSystemInstruction(),
-        generationConfig: {
-            maxOutputTokens: 64000,
-            stopSequences: ["\n\nHuman:", "[DONE]"],
-        },
+        generationConfig,
     }
 
-    if (model.includes("claude")) {
+    if (tools && tools.length > 0) {
         innerRequest.toolConfig = { functionCallingConfig: buildFunctionCallingConfig(toolChoice) }
-    }
-
-    if (tools && tools.length > 0 && model.includes("claude")) {
         innerRequest.tools = tools.map(tool => ({
             functionDeclarations: [{
                 name: tool.name,
@@ -1132,6 +1160,7 @@ export async function* createChatCompletionStreamWithOptions(
         }
         yield "event: message_start\ndata: " + JSON.stringify(messageStart) + "\n\n"
 
+
         for await (const chunkStr of sseStream) {
             // 解析 JSON 字符串
             let chunk: any
@@ -1146,9 +1175,11 @@ export async function* createChatCompletionStreamWithOptions(
             const parts = responseData?.candidates?.[0]?.content?.parts || []
 
             for (const part of parts) {
-                // 🆕 Thinking block support — Antigravity returns thinking as part.thought
-                if (part.thought) {
-                    // Close text block first if open
+                // Google/Antigravity API returns thinking parts as:
+                // { text: "thinking content", thought: true }
+                // The `thought` field is a boolean flag — the thinking TEXT is in part.text
+                if (part.thought === true && part.text) {
+                    // This is a thinking part — route to thinking_delta
                     if (textBlockStarted) {
                         yield "event: content_block_stop\ndata: {\"type\":\"content_block_stop\",\"index\":" + blockIndex + "}\n\n"
                         blockIndex++
@@ -1159,27 +1190,23 @@ export async function* createChatCompletionStreamWithOptions(
                         yield "event: content_block_start\ndata: " + JSON.stringify(thinkingStart) + "\n\n"
                         thinkingBlockStarted = true
                     }
-                    const thinkingDelta = { type: "content_block_delta", index: blockIndex, delta: { type: "thinking_delta", thinking: part.thought } }
+                    const thinkingDelta = { type: "content_block_delta", index: blockIndex, delta: { type: "thinking_delta", thinking: part.text } }
                     yield "event: content_block_delta\ndata: " + JSON.stringify(thinkingDelta) + "\n\n"
-                }
-                if (part.text) {
-                    // Close thinking block first if open
+                } else if (part.text && !part.thought) {
+                    // Regular text content
                     if (thinkingBlockStarted) {
                         yield "event: content_block_stop\ndata: {\"type\":\"content_block_stop\",\"index\":" + blockIndex + "}\n\n"
                         blockIndex++
                         thinkingBlockStarted = false
                     }
-                    // 只在第一次遇到文本时发送 block_start
                     if (!textBlockStarted) {
                         yield "event: content_block_start\ndata: {\"type\":\"content_block_start\",\"index\":" + blockIndex + ",\"content_block\":{\"type\":\"text\",\"text\":\"\"}}\n\n"
                         textBlockStarted = true
                     }
-                    // 每个 text chunk 只发送 delta
                     const textDelta = { type: "content_block_delta", index: blockIndex, delta: { type: "text_delta", text: part.text } }
                     yield "event: content_block_delta\ndata: " + JSON.stringify(textDelta) + "\n\n"
                 }
                 if (part.functionCall) {
-                    // 先关闭文本块（如果有）
                     if (thinkingBlockStarted) {
                         yield "event: content_block_stop\ndata: {\"type\":\"content_block_stop\",\"index\":" + blockIndex + "}\n\n"
                         blockIndex++
@@ -1206,7 +1233,9 @@ export async function* createChatCompletionStreamWithOptions(
             }
 
             const usage = responseData?.usageMetadata
-            if (usage) outputTokens = (usage.candidatesTokenCount || 0) + (usage.thoughtsTokenCount || 0)
+            if (usage) {
+                outputTokens = (usage.candidatesTokenCount || 0) + (usage.thoughtsTokenCount || 0)
+            }
         }
 
         // 关闭最后的思考块（如果有）
