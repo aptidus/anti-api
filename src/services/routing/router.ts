@@ -751,21 +751,23 @@ async function createAccountCompletionWithEntries(request: RoutedRequest, entrie
 }
 
 export async function createRoutedCompletion(request: RoutedRequest) {
-    if (isHiddenCodexModel(request.model)) {
+    const normalizedModel = normalizeOfficialModelId(request.model)
+    if (isHiddenCodexModel(normalizedModel)) {
         throw new RoutingError("Model is not available", 400)
     }
     const config = loadRoutingConfig()
+    const normalizedRequest = { ...request, model: normalizedModel }
     const activeFlow = resolveActiveFlowSelection(config)
     if (activeFlow) {
-        return createFlowCompletionWithEntries(request, activeFlow.entries, activeFlow.flowKey)
+        return createFlowCompletionWithEntries(normalizedRequest, activeFlow.entries, activeFlow.flowKey)
     }
-    if (isOfficialModel(request.model)) {
-        const accountEntries = resolveAccountEntries(config, request.model)
-        return createAccountCompletionWithEntries(request, accountEntries)
+    if (isOfficialModel(normalizedModel)) {
+        const accountEntries = resolveAccountEntries(config, normalizedModel)
+        return createAccountCompletionWithEntries(normalizedRequest, accountEntries)
     }
 
-    const flowSelection = resolveFlowSelection(config, request.model)
-    return createFlowCompletionWithEntries(request, flowSelection.entries, flowSelection.flowKey)
+    const flowSelection = resolveFlowSelection(config, normalizedModel)
+    return createFlowCompletionWithEntries(normalizedRequest, flowSelection.entries, flowSelection.flowKey)
 }
 
 async function* createFlowCompletionStreamWithEntries(request: RoutedRequest, entries: RoutingEntry[], flowKey?: string): AsyncGenerator<string, void, unknown> {
@@ -1136,6 +1138,7 @@ export async function* createRoutedCompletionStream(request: RoutedRequest): Asy
         return
     }
 
-    const flowSelection = resolveFlowSelection(config, request.model)
-    yield* createFlowCompletionStreamWithEntries(request, flowSelection.entries, flowSelection.flowKey)
+    const normalizedRequest = { ...request, model: normalizedModel }
+    const flowSelection = resolveFlowSelection(config, normalizedModel)
+    yield* createFlowCompletionStreamWithEntries(normalizedRequest, flowSelection.entries, flowSelection.flowKey)
 }
