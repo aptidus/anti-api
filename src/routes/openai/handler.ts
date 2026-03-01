@@ -189,6 +189,8 @@ async function handleStreamCompletion(
                             case "content_block_delta":
                                 if (parsed.delta?.type === "text_delta" && parsed.delta?.text) {
                                     await stream.writeSSE({ data: buildStreamChunk(chatId, payload.model, parsed.delta.text) })
+                                } else if (parsed.delta?.type === "thinking_delta" && parsed.delta?.thinking) {
+                                    await stream.writeSSE({ data: buildStreamChunk(chatId, payload.model, undefined, undefined, undefined, undefined, parsed.delta.thinking) })
                                 } else if (parsed.delta?.type === "input_json_delta" && currentToolCall) {
                                     currentToolCall.arguments += parsed.delta.partial_json || ""
                                 }

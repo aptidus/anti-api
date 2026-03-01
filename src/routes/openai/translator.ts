@@ -87,7 +87,8 @@ export function buildStreamChunk(
     content?: string,
     role?: string,
     finishReason?: string,
-    toolCalls?: any[]
+    toolCalls?: any[],
+    thinking?: string,
 ): string {
     const chunk: any = {
         id,
@@ -103,6 +104,7 @@ export function buildStreamChunk(
 
     if (role) chunk.choices[0].delta.role = role
     if (content !== undefined) chunk.choices[0].delta.content = content
+    if (thinking !== undefined) chunk.choices[0].delta.reasoning_content = thinking
     if (toolCalls) {
         chunk.choices[0].delta.tool_calls = toolCalls.map((tc, idx) => ({
             index: idx,
