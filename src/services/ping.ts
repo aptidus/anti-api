@@ -1,3 +1,4 @@
+import consola from "consola"
 import type { ClaudeMessage } from "~/lib/translator"
 import { authStore } from "~/services/auth/store"
 import type { AuthProvider } from "~/services/auth/types"
@@ -107,7 +108,12 @@ export async function testAccountModels(
                 result.agentic = true
                 result.latencyMs = Date.now() - start
 
-                if (response.contentBlocks?.some(b => b.type === "tool_use")) {
+                // Debug: log content blocks for models that don't return tool_use
+                const hasToolUse = response.contentBlocks?.some(b => b.type === "tool_use")
+                if (!hasToolUse) {
+                    consola.warn(`[ping] ${modelId}: no tool_use in response. Blocks:`, JSON.stringify(response.contentBlocks?.map(b => ({ type: b.type, name: (b as any).name, text: b.type === "text" ? (b as any).text?.slice(0, 100) : undefined }))))
+                }
+                if (hasToolUse) {
                     result.toolCall = true
                 }
 

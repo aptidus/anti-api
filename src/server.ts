@@ -43,11 +43,21 @@ server.use(async (c, next) => {
     const status = c.res.status
     const reason = c.res.headers.get("X-Log-Reason") || undefined
 
-    // Only log errors
+    // Only log errors (skip dashboard auth 401s — those are just unauthenticated visitors)
     if (status >= 400) {
         const ctx = getRequestLogContext()
         const method = c.req.method
         const path = c.req.path
+
+        // Suppress noisy dashboard/static 401s
+        if (status === 401 && !ctx.model) {
+            const dashboardPaths = ["/", "/quota", "/routing", "/settings", "/logs", "/remote-panel"]
+            if (dashboardPaths.some(p => path === p || path.startsWith(p + "/"))) {
+                // Silent — just an unauthenticated dashboard visit
+                return
+            }
+        }
+
         const debugInfo = ` (${method} ${path}${reason ? ` - ${reason}` : ""})`
         if (ctx.model && ctx.provider) {
             const providerNames: Record<string, string> = {
