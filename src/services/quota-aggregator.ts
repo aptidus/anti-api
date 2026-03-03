@@ -750,18 +750,11 @@ async function fetchAnthropicQuotas(accounts: ProviderAccount[]): Promise<Accoun
                     ? `${(totalTokens / 1000000).toFixed(1)}M`
                     : totalTokens >= 1000 ? `${Math.round(totalTokens / 1000)}k` : `${totalTokens}`
 
-                // Estimate utilization based on approximate Max limits
-                // Max subscribers typically get ~100-200 msgs/5h window
-                // We use 100 as conservative estimate so percentage errs high
-                const ESTIMATED_5H_LIMIT = 100
-                const estimatedUsedPct = Math.min(100, Math.round((usageData.requestCount / ESTIMATED_5H_LIMIT) * 100))
-                const estimatedRemainingPct = Math.max(0, 100 - estimatedUsedPct)
-
                 const bars: AccountBar[] = [
                     {
                         key: "session",
-                        label: `Session: ~${estimatedUsedPct}% (${usageData.requestCount} req, ${tokenLabel} tok)`,
-                        percentage: estimatedRemainingPct,
+                        label: `Session: ${usageData.requestCount} req, ${tokenLabel} tok (${timeLabel} left)`,
+                        percentage: 100,  // Show full bar — we don't know the actual limit
                         resetTime: new Date(new Date(usageData.windowStart).getTime() + 5 * 60 * 60 * 1000).toISOString(),
                     },
                 ]
