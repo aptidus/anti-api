@@ -48,25 +48,32 @@ export async function testAccountModels(
     provider: AuthProvider,
     accountId: string
 ): Promise<ModelTestResult[]> {
+    // Only test models that are actually used in routing (flow routes + account routes)
+    // Don't test all upstream models — that wastes quota and time
     const routingModels = getRoutingModelsForAccount(provider, accountId)
-    const antigravityModels = provider === "antigravity"
-        ? await getAntigravityPingCandidates(accountId)
-        : []
 
-    // Combine and deduplicate
-    const candidates = [...routingModels, ...antigravityModels].filter(Boolean)
+    // Deduplicate
     const seen = new Set<string>()
-    const uniqueModels = candidates.filter(id => {
-        if (seen.has(id)) return false
+    const uniqueModels = routingModels.filter(id => {
+        if (!id || seen.has(id)) return false
         seen.add(id)
         return true
     })
 
+    // If no routing models, test a single default model to verify account works
     if (uniqueModels.length === 0) {
-        throw new Error(`No models available for provider "${provider}"`)
+        if (provider === "antigravity") {
+            uniqueModels.push("claude-sonnet-4-6")
+        } else if (provider === "codex") {
+            uniqueModels.push("gpt-4o")
+        } else if (provider === "copilot") {
+            uniqueModels.push("gpt-4o")
+        } else if (provider === "anthropic") {
+            uniqueModels.push("claude-sonnet-4-6-20250929")
+        }
     }
 
-    const account = provider === "antigravity" ? null : authStore.getAccount(provider, accountId)
+    const account = (provider !== "antigravity") ? authStore.getAccount(provider, accountId) : null
     if (provider !== "antigravity" && !account) {
         throw new Error(`Account not found: ${accountId}`)
     }
@@ -100,12 +107,10 @@ export async function testAccountModels(
                 result.agentic = true
                 result.latencyMs = Date.now() - start
 
-                // Check if model made a tool call
                 if (response.contentBlocks?.some(b => b.type === "tool_use")) {
                     result.toolCall = true
                 }
 
-                // Check if model supports thinking (by model name pattern)
                 const lm = modelId.toLowerCase()
                 result.thinking = lm.includes("thinking") || lm.includes("gemini-2.5-pro") ||
                     lm.includes("gemini-2-5-pro") || lm.includes("gemini-3-1-pro") ||
@@ -114,11 +119,17 @@ export async function testAccountModels(
             } else if (provider === "codex") {
                 await createCodexCompletion(account!, modelId, TOOL_TEST_MESSAGES, [TEST_TOOL], 256)
                 result.agentic = true
-                result.toolCall = true // codex always supports tools if it responds
+                result.toolCall = true
                 result.latencyMs = Date.now() - start
                 result.thinking = modelId.toLowerCase().includes("thinking") || modelId.toLowerCase().includes("o1") || modelId.toLowerCase().includes("o3")
             } else if (provider === "copilot") {
                 await createCopilotCompletion(account!, modelId, TOOL_TEST_MESSAGES, [TEST_TOOL], 256)
+                result.agentic = true
+                result.toolCall = true
+                result.latencyMs = Date.now() - start
+                result.thinking = modelId.toLowerCase().includes("thinking") || modelId.toLowerCase().includes("o1") || modelId.toLowerCase().includes("o3")
+            } else if (provider === "anthropic") {
+                await createAnthropicCompletion(account!, modelId, TOOL_TEST_MESSAGES, [TEST_TOOL], 256)
                 result.agentic = true
                 result.toolCall = true
                 result.latencyMs = Date.now() - start

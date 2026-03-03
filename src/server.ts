@@ -496,7 +496,7 @@ server.post("/accounts/test-models", async (c) => {
     if (!provider || !accountId) {
         return c.json({ success: false, error: "provider and accountId are required" }, 400)
     }
-    if (!["antigravity", "codex", "copilot"].includes(provider)) {
+    if (!["antigravity", "codex", "copilot", "anthropic"].includes(provider)) {
         return c.json({ success: false, error: "Unsupported provider" }, 400)
     }
 
