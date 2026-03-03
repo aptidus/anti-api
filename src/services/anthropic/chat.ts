@@ -5,11 +5,14 @@
  */
 
 import consola from "consola"
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs"
+import { join } from "path"
 import { authStore } from "~/services/auth/store"
 import { UpstreamError } from "~/lib/error"
 import type { ProviderAccount } from "~/services/auth/types"
 import type { ClaudeMessage, ClaudeContentBlock, ClaudeTool, ContentBlock } from "~/lib/translator"
 import { refreshAnthropicToken } from "./oauth"
+import { getDataDir } from "~/lib/data-dir"
 
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
 const ANTHROPIC_MODELS_URL = "https://api.anthropic.com/v1/models"
@@ -49,6 +52,42 @@ const rateLimitCache = new Map<string, AnthropicRateLimitData>()
 const usageTrackingCache = new Map<string, AnthropicUsageData>()
 
 const FIVE_HOURS_MS = 5 * 60 * 60 * 1000
+const USAGE_FILE = join(getDataDir(), "anthropic-usage.json")
+
+// Load usage tracking from disk on startup
+function loadUsageFromDisk(): void {
+    try {
+        if (existsSync(USAGE_FILE)) {
+            const raw = readFileSync(USAGE_FILE, "utf-8")
+            const data = JSON.parse(raw) as Record<string, AnthropicUsageData>
+            for (const [key, value] of Object.entries(data)) {
+                usageTrackingCache.set(key, value)
+            }
+            consola.info(`[anthropic] Loaded usage tracking for ${Object.keys(data).length} accounts from disk`)
+        }
+    } catch (e) {
+        consola.warn("[anthropic] Failed to load usage tracking from disk:", e)
+    }
+}
+
+function saveUsageToDisk(): void {
+    try {
+        const dir = getDataDir()
+        if (!existsSync(dir)) {
+            mkdirSync(dir, { recursive: true })
+        }
+        const data: Record<string, AnthropicUsageData> = {}
+        usageTrackingCache.forEach((value, key) => {
+            data[key] = value
+        })
+        writeFileSync(USAGE_FILE, JSON.stringify(data, null, 2))
+    } catch (e) {
+        consola.warn("[anthropic] Failed to save usage tracking to disk:", e)
+    }
+}
+
+// Load on module init
+loadUsageFromDisk()
 
 /** Get cached rate limit data for an Anthropic account */
 export function getAnthropicRateLimits(accountId: string): AnthropicRateLimitData | null {
@@ -121,6 +160,9 @@ function trackUsageFromResponse(accountId: string, usage: { input_tokens?: numbe
     current.outputTokens += usage.output_tokens || 0
     current.updatedAt = new Date().toISOString()
     usageTrackingCache.set(accountId, current)
+
+    // Persist to disk
+    saveUsageToDisk()
 
     consola.debug(`[anthropic] Usage for ${accountId}: ${current.requestCount} requests, ${current.inputTokens} in / ${current.outputTokens} out tokens (5h window)`)
 }
