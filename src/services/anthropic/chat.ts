@@ -160,34 +160,95 @@ function mapStopReason(reason?: string): string {
 
 /**
  * Map internal model name to Anthropic API model name
- * The proxy uses canonical names, but Anthropic API uses its own IDs
- * Strips -thinking suffix since thinking is controlled via the thinking parameter
+ * Uses cached model list from API, falls back to pattern matching
  */
-function mapAnthropicModelName(model: string): string {
-    // Strip -thinking suffix — thinking is controlled via the thinking parameter, not model name
-    let base = model.replace(/-thinking$/, "")
+let cachedAnthropicModels: Record<string, string> | null = null
+let modelFetchPromise: Promise<void> | null = null
 
-    // Direct mappings for canonical names to Anthropic dated model IDs
-    const mappings: Record<string, string> = {
-        // Opus 4.6 (latest)
-        "claude-opus-4-6": "claude-opus-4-20250918",
-        "claude-opus-4.6": "claude-opus-4-20250918",
-        // Opus 4.5
-        "claude-opus-4-5": "claude-opus-4-20250514",
-        "claude-opus-4.5": "claude-opus-4-20250514",
-        // Sonnet 4.6
-        "claude-sonnet-4-6": "claude-sonnet-4-20250918",
-        "claude-sonnet-4.6": "claude-sonnet-4-20250918",
-        // Sonnet 4.5
-        "claude-sonnet-4-5": "claude-sonnet-4-20250514",
-        "claude-sonnet-4.5": "claude-sonnet-4-20250514",
-        // Sonnet 4
-        "claude-sonnet-4": "claude-sonnet-4-20250514",
-        // Haiku 4.5
-        "claude-haiku-4-5": "claude-haiku-4-20250414",
-        "claude-haiku-4.5": "claude-haiku-4-20250414",
+async function fetchAndCacheModels(accessToken: string): Promise<void> {
+    if (cachedAnthropicModels) return
+    if (modelFetchPromise) {
+        await modelFetchPromise
+        return
     }
-    return mappings[base] || base
+
+    modelFetchPromise = (async () => {
+        try {
+            const response = await fetch(ANTHROPIC_MODELS_URL, {
+                headers: {
+                    "Authorization": `Bearer ${accessToken}`,
+                    "anthropic-version": "2023-06-01",
+                    "anthropic-beta": "claude-code-20250219,oauth-2025-04-20",
+                    "user-agent": `claude-cli/${CLAUDE_CODE_VERSION} (external, cli)`,
+                    "x-app": "cli",
+                },
+            })
+
+            if (response.ok) {
+                const data = await response.json() as any
+                const models = data.data || data.models || []
+                cachedAnthropicModels = {}
+                for (const m of models) {
+                    const id = m.id || m.name
+                    if (id) {
+                        cachedAnthropicModels[id] = id
+                    }
+                }
+                consola.info(`Cached ${Object.keys(cachedAnthropicModels).length} Anthropic models from API`)
+            } else {
+                consola.warn(`Failed to fetch Anthropic models: ${response.status}`)
+                cachedAnthropicModels = {}
+            }
+        } catch (e) {
+            consola.warn("Error fetching Anthropic models:", e)
+            cachedAnthropicModels = {}
+        } finally {
+            modelFetchPromise = null
+        }
+    })()
+
+    await modelFetchPromise
+}
+
+function mapAnthropicModelName(model: string): string {
+    // Strip -thinking suffix — thinking is controlled via the thinking parameter
+    const base = model.replace(/-thinking$/, "")
+
+    // If the model is already a valid Anthropic API model ID (from cache), use it directly
+    if (cachedAnthropicModels && cachedAnthropicModels[model]) {
+        return model
+    }
+    if (cachedAnthropicModels && cachedAnthropicModels[base]) {
+        return base
+    }
+
+    // Try to find a matching model from the cached list
+    if (cachedAnthropicModels) {
+        // Match by base name (e.g., "claude-sonnet-4-5" matches "claude-sonnet-4-5-20250514")
+        for (const apiId of Object.keys(cachedAnthropicModels)) {
+            if (apiId.startsWith(base)) {
+                return apiId
+            }
+        }
+        // Also try with dots converted to dashes (e.g., "claude-opus-4.6" -> "claude-opus-4-6")
+        const dashBase = base.replace(/\./g, "-")
+        for (const apiId of Object.keys(cachedAnthropicModels)) {
+            if (apiId.startsWith(dashBase)) {
+                return apiId
+            }
+        }
+    }
+
+    // Fallback: pass through as-is and let Anthropic API handle it
+    return base
+}
+
+/**
+ * Determine if thinking should be enabled for the model
+ * Only explicit "-thinking" suffix models get thinking enabled
+ */
+function shouldEnableThinking(model: string): boolean {
+    return model.endsWith("-thinking")
 }
 
 /**
@@ -206,7 +267,12 @@ export async function createAnthropicCompletion(
     usage: { inputTokens: number; outputTokens: number }
 }> {
     const accessToken = await ensureValidToken(account)
+
+    // Fetch and cache real model IDs from the API on first use
+    await fetchAndCacheModels(accessToken)
+
     const mappedModel = mapAnthropicModelName(model)
+    const enableThinking = shouldEnableThinking(model)
 
     const { system, anthropicMessages } = convertMessages(messages)
     const anthropicTools = convertTools(tools)
@@ -214,7 +280,7 @@ export async function createAnthropicCompletion(
     const requestBody: any = {
         model: mappedModel,
         messages: anthropicMessages,
-        max_tokens: maxTokens || 4096,
+        max_tokens: maxTokens || 16384,
     }
 
     // For OAuth tokens, include Claude Code identity
@@ -237,11 +303,9 @@ export async function createAnthropicCompletion(
         requestBody.tools = anthropicTools
     }
 
-    // Enable adaptive thinking for Opus 4.6 / Sonnet 4.6
-    if (model.includes("opus-4-6") || model.includes("opus-4.6") ||
-        model.includes("sonnet-4-6") || model.includes("sonnet-4.6") ||
-        model.includes("thinking")) {
-        requestBody.thinking = { type: "adaptive" }
+    // Only enable thinking when explicitly requested via -thinking suffix
+    if (enableThinking) {
+        requestBody.thinking = { type: "enabled", budget_tokens: maxTokens || 10000 }
     }
 
     const response = await fetch(ANTHROPIC_API_URL, {
