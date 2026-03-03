@@ -118,6 +118,55 @@ const AGENT_TOOLS: { name: string; description: string; input_schema: any }[] = 
             required: ["url"],
         },
     },
+    {
+        name: "delegate_task",
+        description: "Delegate work to a specialist agent. Synchronous — waits for completion and returns results.",
+        input_schema: {
+            type: "object",
+            properties: {
+                agent: { type: "string", description: "Agent name or slug (e.g. backend-architect, python-pro)" },
+                title: { type: "string", description: "Short task title" },
+                description: { type: "string", description: "Detailed task instructions" },
+            },
+            required: ["agent", "title", "description"],
+        },
+    },
+    {
+        name: "update_progress",
+        description: "Update the visible progress checklist shown to the user.",
+        input_schema: {
+            type: "object",
+            properties: {
+                todos: {
+                    type: "array",
+                    items: {
+                        type: "object",
+                        properties: {
+                            content: { type: "string", description: "Step description" },
+                            status: { type: "string", description: "pending, in_progress, or completed" },
+                        },
+                        required: ["content", "status"],
+                    },
+                    description: "Array of todo items",
+                },
+            },
+            required: ["todos"],
+        },
+    },
+    {
+        name: "store_knowledge",
+        description: "Save a reusable fact or lesson learned about a project. Persistent across sessions.",
+        input_schema: {
+            type: "object",
+            properties: {
+                project_name: { type: "string", description: "Project name" },
+                title: { type: "string", description: "Knowledge title" },
+                content: { type: "string", description: "Knowledge content" },
+                category: { type: "string", description: "Category: fact, skill, endpoint, auth, error" },
+            },
+            required: ["project_name", "title", "content"],
+        },
+    },
 ]
 
 const TOOL_TEST_MESSAGES: ClaudeMessage[] = [
@@ -193,7 +242,7 @@ export async function testAccountModels(
                         toolChoice: { type: "any" },
                         maxTokens: 256,
                     },
-                    { accountId, allowRotation: false }
+                    { accountId, allowRotation: false, skipUsageTracking: true }
                 )
 
                 result.agentic = true
@@ -290,7 +339,7 @@ export async function pingAccount(
                         maxTokens: 8,
                         toolChoice: { type: "none" },
                     },
-                    { accountId, allowRotation: false }
+                    { accountId, allowRotation: false, skipUsageTracking: true }
                 )
                 return { modelId: targetModel, latencyMs: Date.now() - start }
             }

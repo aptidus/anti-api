@@ -1042,7 +1042,7 @@ export async function createChatCompletion(request: ChatRequest): Promise<ChatRe
 
 export async function createChatCompletionWithOptions(
     request: ChatRequest,
-    options: { accountId?: string; allowRotation?: boolean; routeTag?: string } = {}
+    options: { accountId?: string; allowRotation?: boolean; routeTag?: string; skipUsageTracking?: boolean } = {}
 ): Promise<ChatResponse> {
     let accessToken: string
     let accountId: string | undefined
@@ -1108,10 +1108,11 @@ export async function createChatCompletionWithOptions(
         const result = parseApiResponse(rawResponse)
 
         // Record usage (fire-and-forget) - use actual native model ID
+        // Skip for ping/test calls to avoid polluting usage data
         const inputTokens = result.usage?.inputTokens || 0
         const outputTokens = result.usage?.outputTokens || 0
         const actualModelId = getAntigravityModelName(request.model)
-        if (inputTokens > 0 || outputTokens > 0) {
+        if ((inputTokens > 0 || outputTokens > 0) && !options.skipUsageTracking) {
             import("~/services/usage-tracker").then(({ recordUsage }) => {
                 recordUsage(actualModelId, inputTokens, outputTokens)
             }).catch(() => { })
