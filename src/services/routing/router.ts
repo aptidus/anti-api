@@ -1098,6 +1098,9 @@ async function* createAccountCompletionStreamWithEntries(request: RoutedRequest,
             } else if (entry.provider === "copilot") {
                 startTime = Date.now()
                 completion = await createCopilotCompletion(account, request.model, request.messages, request.tools, request.maxTokens)
+            } else if (entry.provider === "anthropic") {
+                startTime = Date.now()
+                completion = await createAnthropicCompletion(account, request.model, request.messages, request.tools, request.maxTokens)
             }
 
             if (!completion) {
@@ -1143,6 +1146,9 @@ async function* createAccountCompletionStreamWithEntries(request: RoutedRequest,
             } else if (entry.provider === "copilot") {
                 const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
                 console.log(formatSuccessLine({ elapsed, model: request.model, provider: "copilot", account: accountDisplay, routeTag: "ar" }))
+            } else if (entry.provider === "anthropic") {
+                const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
+                console.log(formatSuccessLine({ elapsed, model: request.model, provider: "anthropic", account: accountDisplay, routeTag: "ar" }))
             }
             accountState.cursor = index
             return
