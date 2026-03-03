@@ -463,7 +463,13 @@ function claudeToAntigravity(
     }
 
     // Enable thinking output for thinking models
-    if (model.includes("thinking")) {
+    // Gemini 3+ Pro models have built-in thinking even without "thinking" in name
+    const isThinkingModel = model.includes("thinking")
+        || model.includes("gemini-3-1-pro")
+        || model.includes("gemini-3-pro")
+        || model.includes("gemini-2.5-pro")
+        || model.includes("gemini-2-5-pro");
+    if (isThinkingModel) {
         generationConfig.thinkingConfig = {
             thinkingBudget: 10000,
         }

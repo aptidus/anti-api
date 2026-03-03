@@ -82,10 +82,13 @@ export async function handleChatCompletion(c: Context): Promise<Response> {
         }
 
         let textContent = ""
+        let reasoningContent = ""
         const toolCalls: any[] = []
 
         for (const block of result.contentBlocks) {
-            if (block.type === "text") {
+            if ((block as any).type === "thinking") {
+                reasoningContent += (block as any).text || ""
+            } else if (block.type === "text") {
                 textContent += block.text || ""
             } else if (block.type === "tool_use") {
                 toolCalls.push({ id: block.id, name: block.name, input: block.input })
@@ -93,6 +96,9 @@ export async function handleChatCompletion(c: Context): Promise<Response> {
         }
 
         const message: any = { role: "assistant", content: toolCalls.length > 0 ? null : textContent }
+        if (reasoningContent) {
+            message.reasoning_content = reasoningContent
+        }
         if (toolCalls.length > 0) {
             message.tool_calls = toolCalls.map((tc) => ({
                 id: tc.id,

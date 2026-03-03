@@ -844,6 +844,16 @@ async function* createFlowCompletionStreamWithEntries(request: RoutedRequest, en
                 continue
             }
 
+            if ((block as any).type === "thinking") {
+                const thinkingStart = { type: "content_block_start", index: blockIndex, content_block: { type: "thinking", thinking: "" } }
+                yield "event: content_block_start\ndata: " + JSON.stringify(thinkingStart) + "\n\n"
+                const thinkingDelta = { type: "content_block_delta", index: blockIndex, delta: { type: "thinking_delta", thinking: block.text || "" } }
+                yield "event: content_block_delta\ndata: " + JSON.stringify(thinkingDelta) + "\n\n"
+                yield buildContentBlockStop(blockIndex)
+                blockIndex++
+                continue
+            }
+
             yield buildContentBlockStart(blockIndex, "text")
             yield buildTextDelta(blockIndex, block.text || "")
             yield buildContentBlockStop(blockIndex)
@@ -1072,6 +1082,17 @@ async function* createAccountCompletionStreamWithEntries(request: RoutedRequest,
                     yield buildContentBlockStart(blockIndex, "tool_use", { id: block.id!, name: block.name! })
                     const inputText = JSON.stringify(block.input || {})
                     yield buildInputJsonDelta(blockIndex, inputText)
+                    yield buildContentBlockStop(blockIndex)
+                    blockIndex++
+                    continue
+                }
+
+                if ((block as any).type === "thinking") {
+                    // Emit thinking block as thinking_delta (Anthropic SSE format)
+                    const thinkingStart = { type: "content_block_start", index: blockIndex, content_block: { type: "thinking", thinking: "" } }
+                    yield "event: content_block_start\ndata: " + JSON.stringify(thinkingStart) + "\n\n"
+                    const thinkingDelta = { type: "content_block_delta", index: blockIndex, delta: { type: "thinking_delta", thinking: block.text || "" } }
+                    yield "event: content_block_delta\ndata: " + JSON.stringify(thinkingDelta) + "\n\n"
                     yield buildContentBlockStop(blockIndex)
                     blockIndex++
                     continue

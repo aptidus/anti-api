@@ -86,10 +86,10 @@ function mapCopilotModelName(model: string): string {
 
 interface OpenAIResponse {
     choices: Array<{
-        message?: { content?: string | null; tool_calls?: any[] }
+        message?: { content?: string | null; tool_calls?: any[]; reasoning_content?: string | null }
         finish_reason?: string | null
     }>
-    usage?: { prompt_tokens?: number; completion_tokens?: number }
+    usage?: { prompt_tokens?: number; completion_tokens?: number; completion_tokens_details?: { reasoning_tokens?: number } }
 }
 
 export async function createCopilotCompletion(
@@ -134,9 +134,15 @@ export async function createCopilotCompletion(
     const data = response.data as OpenAIResponse
     const choice = data?.choices?.[0]
     const content = choice?.message?.content || ""
+    const reasoning = choice?.message?.reasoning_content || ""
     const toolCalls = choice?.message?.tool_calls || []
 
-    const contentBlocks = []
+    const contentBlocks: Array<{ type: "text" | "thinking" | "tool_use"; text?: string; id?: string; name?: string; input?: any }> = []
+
+    // Thinking/reasoning content comes first (before text)
+    if (reasoning) {
+        contentBlocks.push({ type: "thinking" as const, text: reasoning })
+    }
     if (toolCalls.length > 0) {
         for (const call of toolCalls) {
             contentBlocks.push({
