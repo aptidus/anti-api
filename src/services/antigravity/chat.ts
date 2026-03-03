@@ -163,12 +163,15 @@ const MODEL_MAPPING: Record<string, string> = {
     "claude-sonnet-4.6-thinking": "claude-sonnet-4-6",
     "claude-opus-4.6-thinking": "claude-opus-4-6-thinking",
     "claude-sonnet-4-5-20251001": "claude-sonnet-4-5",
-    "gemini-3-1-pro-high": "gemini-3-1-pro-high",
-    "gemini-3.1-pro-high": "gemini-3-1-pro-high",
+    "gemini-3-1-pro-high": "gemini-3.1-pro-high",
+    "gemini-3.1-pro-high": "gemini-3.1-pro-high",
+    "gemini-3-1-pro-low": "gemini-3.1-pro-low",
+    "gemini-3.1-pro-low": "gemini-3.1-pro-low",
     "gemini-3-pro-high": "gemini-3-pro-high",
     "gemini-3-pro-low": "gemini-3-pro-low",
     "gemini-3-flash": "gemini-3-flash",
-    "gemini-3-flash-thinking": "gemini-3-flash-thinking",
+    "gemini-3-flash-thinking": "gemini-3-flash",
+    "gemini-3.1-flash-image": "gemini-3.1-flash-image",
     "gpt-oss-120b": "gpt-oss-120b-medium",
 }
 
@@ -470,6 +473,7 @@ function claudeToAntigravity(
     // but we still need thinkingConfig when the original request had -thinking
     const isThinkingModel = model.includes("thinking")
         || originalModel.includes("thinking")
+        || model.includes("gemini-3.1-pro")
         || model.includes("gemini-3-1-pro")
         || model.includes("gemini-3-pro")
         || model.includes("gemini-2.5-pro")

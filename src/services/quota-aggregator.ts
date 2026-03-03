@@ -321,8 +321,8 @@ function buildAntigravityBars(models: Record<string, ModelInfo>): AccountBar[] {
         "claude-opus-4-6-thinking",
         "gpt-oss-120b",
     ]
-    const gproIds = ["gemini-3-pro-low", "gemini-3-pro-high", "gemini-3-1-pro-high"]
-    const gflashIds = ["gemini-3-flash", "gemini-3-flash-thinking"]
+    const gproIds = ["gemini-3-pro-low", "gemini-3-pro-high", "gemini-3.1-pro-high", "gemini-3.1-pro-low"]
+    const gflashIds = ["gemini-3-flash", "gemini-3.1-flash-image"]
 
     return [
         buildMergedBar("claude_gpt", "claude&gpt", models, claudeGptIds),
