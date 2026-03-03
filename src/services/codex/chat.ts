@@ -185,18 +185,24 @@ async function fetchWithOptionalTls(url: string, options: FetchOptions) {
         const tls = (process.env.NODE_TLS_REJECT_UNAUTHORIZED === "0" || isChatGPT)
             ? { rejectUnauthorized: false }
             : undefined
-        return bunFetch(url, {
+        const bunOpts: any = {
             method: options.method,
             headers: options.headers,
             body: options.body,
             ...(tls ? { tls } : {}),
-        })
+        }
+        const relayProxy = process.env.RELAY_PROXY_URL
+        if (relayProxy) bunOpts.proxy = relayProxy
+        return bunFetch(url, bunOpts)
     }
-    return fetch(url, {
+    const fetchOpts: any = {
         method: options.method,
         headers: options.headers,
         body: options.body,
-    })
+    }
+    const relayProxy = process.env.RELAY_PROXY_URL
+    if (relayProxy) fetchOpts.proxy = relayProxy
+    return fetch(url, fetchOpts)
 }
 
 interface OpenAIResponse {

@@ -128,18 +128,21 @@ async function fetchJsonWithFallback(
         const tls = process.env.NODE_TLS_REJECT_UNAUTHORIZED === "0"
             ? { rejectUnauthorized: false }
             : undefined
+        const relayProxy = process.env.RELAY_PROXY_URL
         const response = bunFetch
             ? await bunFetch(url, {
                 method: options.method,
                 headers: options.headers,
                 body: options.body,
                 ...(tls ? { tls } : {}),
+                ...(relayProxy ? { proxy: relayProxy } : {}),
             })
             : await fetch(url, {
                 method: options.method,
                 headers: options.headers,
                 body: options.body,
-            })
+                ...(relayProxy ? { proxy: relayProxy } : {}),
+            } as any)
         const text = await response.text()
         let data: any = null
         if (text) {
@@ -1230,13 +1233,16 @@ async function probeUrl(url: string): Promise<CodexOAuthProbe> {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 8000)
     try {
-        const response = await fetch(url, {
+        const probeOpts: any = {
             redirect: "manual",
             signal: controller.signal,
             headers: {
                 "User-Agent": "anti-api/1.0",
             },
-        })
+        }
+        const probeRelay = process.env.RELAY_PROXY_URL
+        if (probeRelay) probeOpts.proxy = probeRelay
+        const response = await fetch(url, probeOpts)
         clearTimeout(timeout)
 
         const headers = pickHeaders(response.headers, [

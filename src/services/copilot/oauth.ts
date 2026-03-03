@@ -31,11 +31,14 @@ async function fetchJsonWithFallback(
     options: { method?: string; headers?: Record<string, string>; body?: string }
 ): Promise<JsonResponse> {
     try {
-        const response = await fetch(url, {
+        const fetchOpts: any = {
             method: options.method,
             headers: options.headers,
             body: options.body,
-        })
+        }
+        const relayProxy = process.env.RELAY_PROXY_URL
+        if (relayProxy) fetchOpts.proxy = relayProxy
+        const response = await fetch(url, fetchOpts)
         const text = await response.text()
         let data: any = null
         if (text) {
@@ -58,6 +61,24 @@ async function fetchInsecureJson(
     url: string,
     options: { method?: string; headers?: Record<string, string>; body?: string }
 ): Promise<JsonResponse> {
+    // Prefer Bun's fetch for native proxy + TLS support
+    if (typeof globalThis.Bun !== "undefined") {
+        const fetchOpts: any = {
+            method: options.method || "GET",
+            headers: { "User-Agent": "anti-api", ...(options.headers || {}) },
+            body: options.body,
+            tls: { rejectUnauthorized: false },
+        }
+        const relayProxy = process.env.RELAY_PROXY_URL
+        if (relayProxy) fetchOpts.proxy = relayProxy
+        const response = await fetch(url, fetchOpts)
+        const text = await response.text()
+        let data: any = null
+        if (text) { try { data = JSON.parse(text) } catch { data = null } }
+        return { status: response.status, data, text }
+    }
+
+    // Fallback: Node.js https.request (no proxy support)
     const target = new URL(url)
     const method = options.method || "GET"
     const headers = {
