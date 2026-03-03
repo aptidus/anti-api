@@ -161,25 +161,33 @@ function mapStopReason(reason?: string): string {
 /**
  * Map internal model name to Anthropic API model name
  * The proxy uses canonical names, but Anthropic API uses its own IDs
+ * Strips -thinking suffix since thinking is controlled via the thinking parameter
  */
 function mapAnthropicModelName(model: string): string {
-    // Direct mappings for common aliases
+    // Strip -thinking suffix — thinking is controlled via the thinking parameter, not model name
+    let base = model.replace(/-thinking$/, "")
+
+    // Direct mappings for canonical names to Anthropic dated model IDs
     const mappings: Record<string, string> = {
-        "claude-opus-4-6-thinking": "claude-opus-4-20250918",
+        // Opus 4.6 (latest)
         "claude-opus-4-6": "claude-opus-4-20250918",
         "claude-opus-4.6": "claude-opus-4-20250918",
-        "claude-opus-4-5-thinking": "claude-opus-4-20250514",
+        // Opus 4.5
         "claude-opus-4-5": "claude-opus-4-20250514",
         "claude-opus-4.5": "claude-opus-4-20250514",
+        // Sonnet 4.6
         "claude-sonnet-4-6": "claude-sonnet-4-20250918",
         "claude-sonnet-4.6": "claude-sonnet-4-20250918",
+        // Sonnet 4.5
         "claude-sonnet-4-5": "claude-sonnet-4-20250514",
         "claude-sonnet-4.5": "claude-sonnet-4-20250514",
+        // Sonnet 4
         "claude-sonnet-4": "claude-sonnet-4-20250514",
-        "claude-haiku-4.5": "claude-haiku-4-20250414",
+        // Haiku 4.5
         "claude-haiku-4-5": "claude-haiku-4-20250414",
+        "claude-haiku-4.5": "claude-haiku-4-20250414",
     }
-    return mappings[model] || model
+    return mappings[base] || base
 }
 
 /**
