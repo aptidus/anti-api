@@ -86,6 +86,10 @@ if (API_SECRET) {
             const xApiKey = c.req.header("x-api-key") || ""
             const token = bearerToken || xApiKey
             if (!isValidKey(token)) {
+                const ip = c.req.header("x-forwarded-for") || c.req.header("cf-connecting-ip") || "unknown"
+                const ua = (c.req.header("user-agent") || "").slice(0, 80)
+                const keyPreview = token ? `${token.slice(0, 8)}...` : "(empty)"
+                console.log(`[${formatLogTime()}] 401 rejected: key=${keyPreview} ip=${ip} ua=${ua} path=${path}`)
                 return c.json({ error: { message: "Invalid API key", type: "authentication_error" } }, 401)
             }
             // Track key usage and store label for per-key usage tracking
