@@ -325,7 +325,9 @@ const modelsHandler = (c: any) => {
         owned_by: "routing",
     }))
     const seen = new Set<string>()
-    const models = [...AVAILABLE_MODELS, ...routeModels].filter(model => {
+    const hasAntigravityAccounts = accountManager.count() > 0
+    const baseModels = hasAntigravityAccounts ? AVAILABLE_MODELS : []
+    const models = [...baseModels, ...routeModels].filter(model => {
         if (seen.has(model.id)) return false
         seen.add(model.id)
         return true
@@ -567,7 +569,7 @@ server.all("/v1internal*", async (c) => {
         for (const baseUrl of ANTIGRAVITY_BASE_URLS) {
             const url = `${baseUrl}${ENDPOINT}?alt=${altParam}`
             try {
-                const response = await fetch(url, {
+                const fetchOpts: any = {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -576,7 +578,10 @@ server.all("/v1internal*", async (c) => {
                         "Accept": altParam === "sse" ? "text/event-stream" : "application/json",
                     },
                     body: requestBody,
-                })
+                }
+                const relayProxy = process.env.RELAY_PROXY_URL
+                if (relayProxy) fetchOpts.proxy = relayProxy
+                const response = await fetch(url, fetchOpts)
 
                 if (!response.ok && response.status >= 500) {
                     lastError = await response.text()

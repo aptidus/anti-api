@@ -119,9 +119,9 @@ routingRouter.get("/config", async (c) => {
     }
 
     const models = {
-        antigravity: getProviderModels("antigravity"),
-        codex: getProviderModels("codex"),
-        copilot: getProviderModels("copilot"),
+        antigravity: antigravityAccounts.length > 0 ? getProviderModels("antigravity") : [],
+        codex: codexAccounts.length > 0 ? getProviderModels("codex") : [],
+        copilot: copilotAccounts.length > 0 ? getProviderModels("copilot") : [],
     }
 
     // Get quota data for displaying on model blocks

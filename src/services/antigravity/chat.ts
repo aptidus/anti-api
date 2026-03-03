@@ -138,7 +138,12 @@ async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: nu
         }
     }
     try {
-        return await fetch(url, { ...options, signal: controller.signal })
+        const fetchOptions: any = { ...options, signal: controller.signal }
+        const proxyUrl = process.env.RELAY_PROXY_URL
+        if (proxyUrl) {
+            fetchOptions.proxy = proxyUrl
+        }
+        return await fetch(url, fetchOptions)
     } finally {
         clearTimeout(timeoutId)
     }
