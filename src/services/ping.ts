@@ -6,6 +6,7 @@ import { accountManager } from "~/services/antigravity/account-manager"
 import { fetchAntigravityModels } from "~/services/antigravity/quota-fetch"
 import { createCodexCompletion } from "~/services/codex/chat"
 import { createCopilotCompletion } from "~/services/copilot/chat"
+import { createAnthropicCompletion } from "~/services/anthropic/chat"
 import { getProviderModels } from "~/services/routing/models"
 import { loadRoutingConfig } from "~/services/routing/config"
 import { UpstreamError } from "~/lib/error"
@@ -73,6 +74,11 @@ export async function pingAccount(
 
             if (provider === "copilot") {
                 await createCopilotCompletion(account!, targetModel, PING_MESSAGES, undefined, 8)
+                return { modelId: targetModel, latencyMs: Date.now() - start }
+            }
+
+            if (provider === "anthropic") {
+                await createAnthropicCompletion(account!, targetModel, PING_MESSAGES, undefined, 8)
                 return { modelId: targetModel, latencyMs: Date.now() - start }
             }
         } catch (error) {
