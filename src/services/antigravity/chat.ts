@@ -691,10 +691,10 @@ async function sendRequestSse(
                     throw new UpstreamError("antigravity", 429, lastErrorText, lastRetryAfterHeader)
                 }
 
-                // 🆕 401 处理：刷新 token 并重试
+                // 🆕 401 处理：强制刷新 token 并重试
                 if (lastStatusCode === 401 && currentAccountId) {
                     try {
-                        const refreshed = await accountManager.getAccountById(currentAccountId)
+                        const refreshed = await accountManager.getAccountById(currentAccountId, { forceRefresh: true })
                         if (refreshed) {
                             currentAccessToken = refreshed.accessToken
                             // Break endpoint loop to retry with new token
@@ -838,6 +838,32 @@ async function* sendRequestSseStreaming(
                         const upstream = new UpstreamError("antigravity", response.status, errorText, response.headers.get("retry-after") || undefined)
                             ; (upstream as any).retryable = true
                         throw upstream
+                    }
+                    // 401 处理：强制刷新 token 并重试
+                    if (response.status === 401 && currentAccountId) {
+                        try {
+                            const refreshed = await accountManager.getAccountById(currentAccountId, { forceRefresh: true })
+                            if (refreshed) {
+                                currentAccessToken = refreshed.accessToken
+                                lastError = new UpstreamError("antigravity", 401, errorText)
+                                retryAttempt = true
+                                break
+                            }
+                        } catch (e) {
+                            consola.warn(`[Stream] Failed to refresh token for ${currentAccountId}:`, e)
+                        }
+                        // If refresh failed, try next account
+                        if (allowRotation && accountManager.count() > 1) {
+                            const next = await accountManager.getNextAvailableAccount(true)
+                            if (next && next.accountId !== currentAccountId) {
+                                currentAccessToken = next.accessToken
+                                currentAccountId = next.accountId
+                                antigravityRequest.project = next.projectId
+                                retryAttempt = true
+                                break
+                            }
+                        }
+                        throw new UpstreamError("antigravity", 401, errorText)
                     }
                     if (shouldTryNextEndpoint(response.status)) {
                         lastError = new UpstreamError("antigravity", response.status, errorText, response.headers.get("retry-after") || undefined)

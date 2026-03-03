@@ -712,7 +712,7 @@ class AccountManager {
     /**
      * 按 ID 获取指定账号（并刷新 token）
      */
-    async getAccountById(accountId: string): Promise<{
+    async getAccountById(accountId: string, options?: { forceRefresh?: boolean }): Promise<{
         accessToken: string
         projectId: string
         email: string
@@ -730,8 +730,13 @@ class AccountManager {
             return null
         }
 
-        if (account.expiresAt > 0 && now > account.expiresAt - 5 * 60 * 1000) {
+        const shouldRefresh = options?.forceRefresh ||
+            (account.expiresAt > 0 && now > account.expiresAt - 5 * 60 * 1000)
+        if (shouldRefresh) {
             try {
+                if (options?.forceRefresh) {
+                    consola.info(`Force-refreshing token for ${account.email} (401 recovery)`)
+                }
                 const tokens = await refreshAccessToken(account.refreshToken)
                 account.accessToken = tokens.accessToken
                 account.expiresAt = now + tokens.expiresIn * 1000
