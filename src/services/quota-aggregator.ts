@@ -21,14 +21,14 @@ type AccountBar = {
 }
 
 export type AccountQuotaView = {
-    provider: "antigravity" | "codex" | "copilot"
+    provider: "antigravity" | "codex" | "copilot" | "anthropic"
     accountId: string
     displayName: string
     bars: AccountBar[]
 }
 
 type QuotaCacheEntry = {
-    provider: "antigravity" | "codex" | "copilot"
+    provider: "antigravity" | "codex" | "copilot" | "anthropic"
     accountId: string
     displayName: string
     bars: AccountBar[]
@@ -149,8 +149,9 @@ export async function getAggregatedQuota(): Promise<{
     const antigravityAccounts = authStore.listAccounts("antigravity")
     const codexAccounts = authStore.listAccounts("codex")
     const copilotAccounts = authStore.listAccounts("copilot")
+    const anthropicAccounts = authStore.listAccounts("anthropic")
 
-    const [antigravity, codex, copilot] = await Promise.all([
+    const [antigravity, codex, copilot, anthropic] = await Promise.all([
         withTimeout(
             fetchAntigravityQuotas(antigravityAccounts),
             PROVIDER_FETCH_TIMEOUT_MS,
@@ -169,12 +170,18 @@ export async function getAggregatedQuota(): Promise<{
             () => buildCachedViews("copilot", copilotAccounts),
             "Copilot",
         ),
+        withTimeout(
+            fetchAnthropicQuotas(anthropicAccounts),
+            PROVIDER_FETCH_TIMEOUT_MS,
+            () => buildCachedViews("anthropic", anthropicAccounts),
+            "Anthropic",
+        ),
     ])
     saveQuotaCache()
 
     return {
         timestamp: new Date().toISOString(),
-        accounts: [...antigravity, ...codex, ...copilot],
+        accounts: [...antigravity, ...codex, ...copilot, ...anthropic],
     }
 }
 
@@ -544,6 +551,55 @@ function isAuthError(error: unknown): boolean {
     if (message.toLowerCase().includes("unauthenticated")) return true
     if (message.toLowerCase().includes("invalid_grant")) return true
     return false
+}
+
+async function fetchAnthropicQuotas(accounts: ProviderAccount[]): Promise<AccountQuotaView[]> {
+    const promises = accounts.map(async (account) => {
+        try {
+            // Check token validity by fetching models
+            const response = await fetch("https://api.anthropic.com/v1/models", {
+                headers: {
+                    "Authorization": `Bearer ${account.accessToken}`,
+                    "anthropic-version": "2023-06-01",
+                    "anthropic-beta": "claude-code-20250219,oauth-2025-04-20",
+                    "user-agent": "claude-cli/2.1.2 (external, cli)",
+                    "x-app": "cli",
+                },
+            })
+
+            const isValid = response.ok
+            const bar: AccountBar = {
+                key: "status",
+                label: "status",
+                percentage: isValid ? 100 : 0,
+            }
+
+            updateQuotaCache({
+                provider: "anthropic",
+                accountId: account.id,
+                displayName: account.email || account.id,
+                bars: [bar],
+                updatedAt: new Date().toISOString(),
+            })
+
+            return {
+                provider: "anthropic" as const,
+                accountId: account.id,
+                displayName: account.email || account.id,
+                bars: [bar],
+            }
+        } catch (error) {
+            consola.warn("Anthropic quota check failed:", error)
+            const cachedBars = getCachedBars("anthropic", account.id)
+            return {
+                provider: "anthropic" as const,
+                accountId: account.id,
+                displayName: account.email || account.id,
+                bars: cachedBars || [{ key: "status", label: "status", percentage: 0 }],
+            }
+        }
+    })
+    return Promise.all(promises)
 }
 
 type InsecureResponse = {
