@@ -16,21 +16,112 @@ const PING_MESSAGES: ClaudeMessage[] = [
     { role: "user", content: "ping" },
 ]
 
-// Tool-calling test: asks model to use a tool
-const TEST_TOOL: { name: string; description: string; input_schema: any } = {
-    name: "get_weather",
-    description: "Get the current weather for a location",
-    input_schema: {
-        type: "object",
-        properties: {
-            location: { type: "string", description: "City name" },
+// Tool-calling test: realistic agentic tool set matching Spear Agents
+// Tests multi-tool function calling with complex schemas
+const AGENT_TOOLS: { name: string; description: string; input_schema: any }[] = [
+    {
+        name: "read_file",
+        description: "Read the contents of a file at the given absolute path.",
+        input_schema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Absolute path to the file to read" },
+                startLine: { type: "integer", description: "Optional 1-indexed start line" },
+                endLine: { type: "integer", description: "Optional 1-indexed end line" },
+            },
+            required: ["path"],
         },
-        required: ["location"],
     },
-}
+    {
+        name: "write_file",
+        description: "Write content to a file. Creates parent directories if needed.",
+        input_schema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Absolute path to the file" },
+                content: { type: "string", description: "Content to write" },
+            },
+            required: ["path", "content"],
+        },
+    },
+    {
+        name: "edit_file",
+        description: "Make targeted edits to a file using find-and-replace.",
+        input_schema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Absolute path to the file" },
+                old_text: { type: "string", description: "Exact text to find" },
+                new_text: { type: "string", description: "Replacement text" },
+            },
+            required: ["path", "old_text", "new_text"],
+        },
+    },
+    {
+        name: "run_command",
+        description: "Execute a shell command and return its output.",
+        input_schema: {
+            type: "object",
+            properties: {
+                command: { type: "string", description: "Shell command to execute" },
+                cwd: { type: "string", description: "Working directory (absolute path)" },
+            },
+            required: ["command"],
+        },
+    },
+    {
+        name: "list_directory",
+        description: "List files and subdirectories at the given path.",
+        input_schema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Absolute path to list" },
+            },
+            required: ["path"],
+        },
+    },
+    {
+        name: "search_files",
+        description: "Search for a text pattern in files using grep.",
+        input_schema: {
+            type: "object",
+            properties: {
+                pattern: { type: "string", description: "Text or regex pattern" },
+                directory: { type: "string", description: "Directory to search (absolute path)" },
+                include: { type: "string", description: "Glob pattern for files, e.g. '*.ts'" },
+            },
+            required: ["pattern", "directory"],
+        },
+    },
+    {
+        name: "glob",
+        description: "Find files matching a glob pattern recursively.",
+        input_schema: {
+            type: "object",
+            properties: {
+                pattern: { type: "string", description: "Glob pattern, e.g. '**/*.ts'" },
+                directory: { type: "string", description: "Base directory (absolute path)" },
+            },
+            required: ["pattern", "directory"],
+        },
+    },
+    {
+        name: "web_fetch",
+        description: "Fetch content from a URL. Returns the response body as text.",
+        input_schema: {
+            type: "object",
+            properties: {
+                url: { type: "string", description: "URL to fetch" },
+                method: { type: "string", description: "HTTP method (GET, POST, etc.)" },
+                headers: { type: "string", description: "JSON string of headers" },
+            },
+            required: ["url"],
+        },
+    },
+]
 
 const TOOL_TEST_MESSAGES: ClaudeMessage[] = [
-    { role: "user", content: "What's the weather in Tokyo? Use the get_weather tool." },
+    { role: "user", content: "Read the file at /tmp/test.txt and then search for TODO comments in the /workspace directory. Use the appropriate tools." },
 ]
 
 export interface ModelTestResult {
@@ -98,7 +189,7 @@ export async function testAccountModels(
                     {
                         model: modelId,
                         messages: TOOL_TEST_MESSAGES,
-                        tools: [TEST_TOOL],
+                        tools: AGENT_TOOLS,
                         toolChoice: { type: "any" },
                         maxTokens: 256,
                     },
@@ -121,19 +212,19 @@ export async function testAccountModels(
                     lm.includes("gemini-3-pro") || lm.includes("claude-sonnet-4-6") ||
                     lm.includes("claude-sonnet-4.6")
             } else if (provider === "codex") {
-                await createCodexCompletion(account!, modelId, TOOL_TEST_MESSAGES, [TEST_TOOL], 256)
+                await createCodexCompletion(account!, modelId, TOOL_TEST_MESSAGES, AGENT_TOOLS, 256)
                 result.agentic = true
                 result.toolCall = true
                 result.latencyMs = Date.now() - start
                 result.thinking = modelId.toLowerCase().includes("thinking") || modelId.toLowerCase().includes("o1") || modelId.toLowerCase().includes("o3")
             } else if (provider === "copilot") {
-                await createCopilotCompletion(account!, modelId, TOOL_TEST_MESSAGES, [TEST_TOOL], 256)
+                await createCopilotCompletion(account!, modelId, TOOL_TEST_MESSAGES, AGENT_TOOLS, 256)
                 result.agentic = true
                 result.toolCall = true
                 result.latencyMs = Date.now() - start
                 result.thinking = modelId.toLowerCase().includes("thinking") || modelId.toLowerCase().includes("o1") || modelId.toLowerCase().includes("o3")
             } else if (provider === "anthropic") {
-                await createAnthropicCompletion(account!, modelId, TOOL_TEST_MESSAGES, [TEST_TOOL], 256)
+                await createAnthropicCompletion(account!, modelId, TOOL_TEST_MESSAGES, AGENT_TOOLS, 256)
                 result.agentic = true
                 result.toolCall = true
                 result.latencyMs = Date.now() - start
