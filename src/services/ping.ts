@@ -189,6 +189,8 @@ const AGENT_TOOLS: { type: "function"; function: { name: string; description: st
 
 export interface ModelTestResult {
     modelId: string
+    upstreamModel?: string
+    upstreamProvider?: string
     agentic: boolean
     toolCall: boolean
     thinking: boolean
@@ -209,14 +211,7 @@ function getProxyBaseUrl(): string {
  * Call our own /v1/chat/completions endpoint as if we were an agent.
  * This tests the full path: API key auth → routing → upstream → response translation.
  */
-async function callProxy(params: {
-    model: string
-    messages: Array<{ role: string; content: string }>
-    tools?: typeof AGENT_TOOLS
-    tool_choice?: string | { type: string; function?: { name: string } }
-    max_tokens?: number
-    apiKey: string
-}): Promise<{
+interface ProxyResponse {
     choices: Array<{
         message: {
             role: string
@@ -226,7 +221,18 @@ async function callProxy(params: {
         finish_reason: string
     }>
     usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number }
-}> {
+    // Routing metadata from response headers
+    _upstream?: { model?: string; provider?: string; routeTag?: string }
+}
+
+async function callProxy(params: {
+    model: string
+    messages: Array<{ role: string; content: string }>
+    tools?: typeof AGENT_TOOLS
+    tool_choice?: string | { type: string; function?: { name: string } }
+    max_tokens?: number
+    apiKey: string
+}): Promise<ProxyResponse> {
     const baseUrl = getProxyBaseUrl()
     const resp = await fetch(`${baseUrl}/v1/chat/completions`, {
         method: "POST",
@@ -252,7 +258,16 @@ async function callProxy(params: {
         throw new Error(`${resp.status}: ${body.slice(0, 200)}`)
     }
 
-    return await resp.json()
+    const json = await resp.json()
+
+    // Extract upstream routing info from response headers
+    json._upstream = {
+        model: resp.headers.get("x-upstream-model") || undefined,
+        provider: resp.headers.get("x-upstream-provider") || undefined,
+        routeTag: resp.headers.get("x-route-tag") || undefined,
+    }
+
+    return json
 }
 
 /**
@@ -308,20 +323,27 @@ export async function testAccountModels(
             result.agentic = true
             result.latencyMs = Date.now() - start
 
+            // Capture actual upstream model/provider from response headers
+            if (response._upstream) {
+                result.upstreamModel = response._upstream.model
+                result.upstreamProvider = response._upstream.provider
+            }
+
             // Check if model returned tool calls
             const choice = response.choices?.[0]
             const toolCalls = choice?.message?.tool_calls || []
             const hasToolUse = toolCalls.length > 0
 
-            console.log(`[ping] ${modelId}: tool_use=${hasToolUse} tools=${JSON.stringify(toolCalls.map(tc => tc.function?.name))} finish=${choice?.finish_reason}`)
+            const upstreamInfo = result.upstreamModel ? ` → ${result.upstreamModel} [${result.upstreamProvider || "?"}]` : ""
+            console.log(`[ping] ${modelId}${upstreamInfo}: tool_use=${hasToolUse} tools=${JSON.stringify(toolCalls.map(tc => tc.function?.name))} finish=${choice?.finish_reason}`)
 
             if (hasToolUse) {
                 result.toolCall = true
             }
 
-            // Infer thinking capability from model name
-            const lm = modelId.toLowerCase()
-            result.thinking = lm.includes("thinking") || lm.includes("pro")
+            // Infer thinking capability from actual upstream model name (more accurate) or flow route name
+            const checkModel = (result.upstreamModel || modelId).toLowerCase()
+            result.thinking = checkModel.includes("thinking") || checkModel.includes("pro")
         } catch (error) {
             result.latencyMs = Date.now() - start
             result.error = (error as Error).message?.slice(0, 200) || "Unknown error"

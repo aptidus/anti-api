@@ -1560,11 +1560,15 @@
                         const thinkIcon = r.thinking ? `<span class="text-emerald-400">${check}</span>` : `<span class="text-gray-600">—</span>`;
                         const latency = (r.latencyMs / 1000).toFixed(1);
                         const errorHtml = r.error ? `<div class="text-[9px] text-red-400 truncate mt-0.5">${r.error}</div>` : '';
-                        // Shorten model name for display
+                        // Show flow route name + actual upstream model
                         const shortModel = r.modelId.replace('claude-', '').replace('gemini-', 'g-');
+                        const upstreamInfo = r.upstreamModel ? `<span class="text-blue-400 font-mono truncate max-w-[100px]" title="${r.upstreamModel} [${r.upstreamProvider || '?'}]"> → ${r.upstreamModel.replace('models/', '').replace('claude-', '')}</span>` : '';
                         return `
                             <div class="flex items-center justify-between text-[10px] py-1 border-t border-gray-800/50">
-                                <span class="text-gray-400 font-mono truncate max-w-[120px]" title="${r.modelId}">${shortModel}</span>
+                                <div class="flex items-center gap-1 truncate max-w-[200px]">
+                                    <span class="text-gray-400 font-mono truncate" title="${r.modelId}">${shortModel}</span>
+                                    ${upstreamInfo}
+                                </div>
                                 <div class="flex items-center gap-2 text-[10px]">
                                     <span title="Agentic">${agenticIcon}</span>
                                     <span title="Tool Call">${toolIcon}</span>

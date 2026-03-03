@@ -19,6 +19,7 @@ import {
 import { validateChatRequest } from "~/lib/validation"
 import { rateLimiter } from "~/lib/rate-limiter"
 import { forwardError, summarizeUpstreamError, UpstreamError } from "~/lib/error"
+import { getRequestLogContext } from "~/lib/logger"
 
 function normalizeChatPayload(payload: OpenAIChatCompletionRequest): void {
     if (payload.max_tokens !== undefined && (payload.max_tokens === null || payload.max_tokens <= 0)) {
@@ -110,6 +111,12 @@ export async function handleChatCompletion(c: Context): Promise<Response> {
         // Token counts for response (Usage recording is handled in chat.ts with actual native model ID)
         const inputTokens = result.usage?.inputTokens || 0
         const outputTokens = result.usage?.outputTokens || 0
+
+        // Expose actual upstream routing info via headers (for ping tests & debugging)
+        const routeCtx = getRequestLogContext()
+        if (routeCtx.model) c.header("X-Upstream-Model", routeCtx.model)
+        if (routeCtx.provider) c.header("X-Upstream-Provider", routeCtx.provider)
+        if (routeCtx.routeTag) c.header("X-Route-Tag", routeCtx.routeTag)
 
         return c.json({
             id: generateChatId(),
