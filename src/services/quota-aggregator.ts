@@ -8,6 +8,7 @@ import { fetchAntigravityModels as fetchAntigravityModelsRequest, type Antigravi
 import { refreshCodexAccessToken, refreshCodexAccountIfNeeded } from "~/services/codex/oauth"
 import { accountManager } from "~/services/antigravity/account-manager"
 import type { ProviderAccount } from "~/services/auth/types"
+import { getAnthropicRateLimits } from "~/services/anthropic/chat"
 import { UpstreamError } from "~/lib/error"
 import { getDataDir } from "~/lib/data-dir"
 
@@ -556,7 +557,50 @@ function isAuthError(error: unknown): boolean {
 async function fetchAnthropicQuotas(accounts: ProviderAccount[]): Promise<AccountQuotaView[]> {
     const promises = accounts.map(async (account) => {
         try {
-            // Check token validity by fetching models
+            // Check if we have cached rate limit data from recent API calls
+            const rateLimits = getAnthropicRateLimits(account.id)
+
+            if (rateLimits && rateLimits.requestsLimit > 0) {
+                // Use real rate limit data from API response headers
+                const reqPercent = rateLimits.requestsLimit > 0
+                    ? Math.round((rateLimits.requestsRemaining / rateLimits.requestsLimit) * 100)
+                    : 0
+                const tokPercent = rateLimits.tokensLimit > 0
+                    ? Math.round((rateLimits.tokensRemaining / rateLimits.tokensLimit) * 100)
+                    : 0
+
+                const bars: AccountBar[] = [
+                    {
+                        key: "requests",
+                        label: `req ${rateLimits.requestsRemaining}/${rateLimits.requestsLimit}`,
+                        percentage: reqPercent,
+                        resetTime: rateLimits.requestsReset || undefined,
+                    },
+                    {
+                        key: "tokens",
+                        label: `tok ${Math.round(rateLimits.tokensRemaining / 1000)}k/${Math.round(rateLimits.tokensLimit / 1000)}k`,
+                        percentage: tokPercent,
+                        resetTime: rateLimits.tokensReset || undefined,
+                    },
+                ]
+
+                updateQuotaCache({
+                    provider: "anthropic",
+                    accountId: account.id,
+                    displayName: account.email || account.id,
+                    bars,
+                    updatedAt: rateLimits.updatedAt,
+                })
+
+                return {
+                    provider: "anthropic" as const,
+                    accountId: account.id,
+                    displayName: account.email || account.id,
+                    bars,
+                }
+            }
+
+            // Fallback: check token validity if no rate limit data yet
             const response = await fetch("https://api.anthropic.com/v1/models", {
                 headers: {
                     "Authorization": `Bearer ${account.accessToken}`,

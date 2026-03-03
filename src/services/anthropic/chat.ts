@@ -15,6 +15,45 @@ const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
 const ANTHROPIC_MODELS_URL = "https://api.anthropic.com/v1/models"
 const CLAUDE_CODE_VERSION = "2.1.2"
 
+// Rate limit data captured from Anthropic API response headers
+export interface AnthropicRateLimitData {
+    requestsLimit: number
+    requestsRemaining: number
+    requestsReset: string
+    tokensLimit: number
+    tokensRemaining: number
+    tokensReset: string
+    updatedAt: string
+}
+
+const rateLimitCache = new Map<string, AnthropicRateLimitData>()
+
+/** Get cached rate limit data for an Anthropic account */
+export function getAnthropicRateLimits(accountId: string): AnthropicRateLimitData | null {
+    return rateLimitCache.get(accountId) || null
+}
+
+function captureRateLimitHeaders(accountId: string, response: Response): void {
+    const reqLimit = response.headers.get("anthropic-ratelimit-requests-limit")
+    const reqRemaining = response.headers.get("anthropic-ratelimit-requests-remaining")
+    const reqReset = response.headers.get("anthropic-ratelimit-requests-reset")
+    const tokLimit = response.headers.get("anthropic-ratelimit-tokens-limit")
+    const tokRemaining = response.headers.get("anthropic-ratelimit-tokens-remaining")
+    const tokReset = response.headers.get("anthropic-ratelimit-tokens-reset")
+
+    if (reqLimit || tokLimit) {
+        rateLimitCache.set(accountId, {
+            requestsLimit: parseInt(reqLimit || "0", 10),
+            requestsRemaining: parseInt(reqRemaining || "0", 10),
+            requestsReset: reqReset || "",
+            tokensLimit: parseInt(tokLimit || "0", 10),
+            tokensRemaining: parseInt(tokRemaining || "0", 10),
+            tokensReset: tokReset || "",
+            updatedAt: new Date().toISOString(),
+        })
+    }
+}
+
 // Token refresh lock to prevent concurrent refreshes
 let refreshLock: Promise<void> | null = null
 
@@ -333,6 +372,9 @@ export async function createAnthropicCompletion(
     }
 
     const data = await response.json() as any
+
+    // Capture rate limit headers from Anthropic response (real-time quota tracking)
+    captureRateLimitHeaders(account.id, response)
 
     // Convert Anthropic response to internal ContentBlock format
     const contentBlocks: ContentBlock[] = []
