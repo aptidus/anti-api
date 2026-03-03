@@ -527,6 +527,33 @@ server.post("/accounts/test-models", async (c) => {
     }
 })
 
+// Debug: dump upstream model names from Antigravity
+server.get("/accounts/upstream-models", async (c) => {
+    const accounts = authStore.listAccounts("antigravity")
+    const results: any[] = []
+    for (const account of accounts) {
+        try {
+            const mgr = accountManager
+            const acc = await mgr.getAccountById(account.id, { forceRefresh: true })
+            if (!acc) {
+                results.push({ email: account.email, error: "Account unavailable" })
+                continue
+            }
+            const { fetchAntigravityModels } = await import("~/services/antigravity/quota-fetch")
+            const data = await fetchAntigravityModels(acc.accessToken, acc.projectId)
+            results.push({
+                email: acc.email,
+                projectId: acc.projectId,
+                models: Object.keys(data.models),
+                quota: data.models,
+            })
+        } catch (error) {
+            results.push({ email: account.email, error: (error as Error).message })
+        }
+    }
+    return c.json({ accounts: results })
+})
+
 // 删除账号 - API（同时清理 routing 配置）
 server.delete("/accounts/:id", async (c) => {
     const accountId = c.req.param("id")
