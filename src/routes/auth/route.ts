@@ -151,7 +151,6 @@ authRouter.post("/login", async (c) => {
         }
 
         setAuth(body.accessToken, body.refreshToken, body.email, body.name)
-        accountManager.load()
         accountManager.addAccount({
             id: body.email || `account-${Date.now()}`,
             email: body.email || "unknown",
@@ -268,7 +267,6 @@ authRouter.post("/exchange", async (c) => {
         saveAuth()
 
         // Register account
-        accountManager.load()
         accountManager.addAccount({
             id: userInfo.email,
             email: userInfo.email,
