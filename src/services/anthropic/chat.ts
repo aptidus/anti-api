@@ -305,7 +305,10 @@ export async function createAnthropicCompletion(
 
     // Only enable thinking when explicitly requested via -thinking suffix
     if (enableThinking) {
-        requestBody.thinking = { type: "enabled", budget_tokens: maxTokens || 10000 }
+        const budgetTokens = Math.max(1024, maxTokens || 10000)
+        requestBody.thinking = { type: "enabled", budget_tokens: budgetTokens }
+        // When thinking is enabled, max_tokens must be higher
+        requestBody.max_tokens = Math.max(requestBody.max_tokens, budgetTokens + 1024)
     }
 
     const response = await fetch(ANTHROPIC_API_URL, {
