@@ -9,11 +9,11 @@ import { getAggregatedQuota } from "~/services/quota-aggregator"
 import { readFileSync } from "fs"
 import { join } from "path"
 import { randomUUID } from "crypto"
-import type { ProviderAccount, ProviderAccountSummary } from "~/services/auth/types"
+import type { AuthProvider, ProviderAccount, ProviderAccountSummary } from "~/services/auth/types"
 
 export const routingRouter = new Hono()
 
-function resolveAccountLabel(provider: "antigravity" | "codex" | "copilot", accountId: string, fallback?: string): string {
+function resolveAccountLabel(provider: AuthProvider, accountId: string, fallback?: string): string {
     if (accountId === "auto") return "auto"
     const account = authStore.getAccount(provider, accountId)
     return account?.label || account?.email || account?.login || fallback || accountId
@@ -43,7 +43,7 @@ function syncAccountRoutingLabels(accountRouting?: AccountRoutingConfig): Accoun
     }
 }
 
-function listAccountsInOrder(provider: "antigravity" | "codex" | "copilot"): ProviderAccount[] {
+function listAccountsInOrder(provider: "antigravity" | "codex" | "copilot" | "anthropic"): ProviderAccount[] {
     const accounts = authStore.listAccounts(provider)
     return accounts.sort((a, b) => {
         const aTime = a.createdAt || ""
@@ -91,6 +91,7 @@ routingRouter.get("/config", async (c) => {
     const antigravityAccounts = listAccountsInOrder("antigravity")
     const codexAccounts = listAccountsInOrder("codex")
     const copilotAccounts = listAccountsInOrder("copilot")
+    const anthropicAccounts = listAccountsInOrder("anthropic")
 
     const primaryCopilotAccount = copilotAccounts.find(account => !!account.accessToken)
     if (primaryCopilotAccount) {
@@ -116,12 +117,14 @@ routingRouter.get("/config", async (c) => {
         antigravity: antigravityAccounts.map(toSummary),
         codex: codexAccounts.map(toSummary),
         copilot: copilotAccounts.map(toSummary),
+        anthropic: anthropicAccounts.map(toSummary),
     }
 
     const models = {
         antigravity: antigravityAccounts.length > 0 ? getProviderModels("antigravity") : [],
         codex: codexAccounts.length > 0 ? getProviderModels("codex") : [],
         copilot: copilotAccounts.length > 0 ? getProviderModels("copilot") : [],
+        anthropic: anthropicAccounts.length > 0 ? getProviderModels("anthropic") : [],
     }
 
     // Get quota data for displaying on model blocks
