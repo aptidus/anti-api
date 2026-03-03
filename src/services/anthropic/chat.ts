@@ -512,6 +512,8 @@ export async function createAnthropicCompletion(
         for (const block of data.content) {
             if (block.type === "text") {
                 contentBlocks.push({ type: "text", text: block.text || "" })
+            } else if (block.type === "thinking") {
+                contentBlocks.push({ type: "thinking" as any, text: block.thinking || "" })
             } else if (block.type === "tool_use") {
                 contentBlocks.push({
                     type: "tool_use",
@@ -520,7 +522,6 @@ export async function createAnthropicCompletion(
                     input: block.input || {},
                 })
             }
-            // Skip thinking blocks — they're internal to Claude
         }
     }
 
