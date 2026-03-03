@@ -659,3 +659,17 @@ server.get("/health", (c) => c.json({
     status: "ok",
     authenticated: isAuthenticated(),
 }))
+
+// Debug: raw upstream model names
+server.get("/debug/upstream-models", async (c) => {
+    try {
+        const { fetchAntigravityModels } = await import("./services/antigravity/quota-fetch")
+        const accounts = authStore.listAccounts("antigravity")
+        if (accounts.length === 0) return c.json({ error: "no antigravity accounts" })
+        const account = accounts[0]
+        const result = await fetchAntigravityModels(account.accessToken, account.projectId)
+        return c.json({ models: Object.keys(result.models), raw: result.models })
+    } catch (e: any) {
+        return c.json({ error: e.message }, 500)
+    }
+})
