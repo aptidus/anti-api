@@ -495,7 +495,8 @@ server.post("/accounts/ping", async (c) => {
     }
 })
 
-// Test all models for a specific account (agentic, tool calling, thinking)
+// Test all flow route models end-to-end (auth → routing → upstream → tool calling)
+// This is what agents actually do — call /v1/chat/completions with flow route model IDs
 server.post("/accounts/test-models", async (c) => {
     let body: { provider?: string; accountId?: string } = {}
     try {
@@ -504,22 +505,17 @@ server.post("/accounts/test-models", async (c) => {
         body = {}
     }
 
+    // provider/accountId are accepted for backward compat but ignored —
+    // we now test all flow routes through the proxy's own HTTP endpoint
     const provider = (body.provider || "").toLowerCase()
     const accountId = body.accountId || ""
 
-    if (!provider || !accountId) {
-        return c.json({ success: false, error: "provider and accountId are required" }, 400)
-    }
-    if (!["antigravity", "codex", "copilot", "anthropic"].includes(provider)) {
-        return c.json({ success: false, error: "Unsupported provider" }, 400)
-    }
-
     try {
-        const results = await testAccountModels(provider as any, accountId)
+        const results = await testAccountModels(provider, accountId)
         return c.json({
             success: true,
-            provider,
-            accountId,
+            provider: provider || "all",
+            accountId: accountId || "flow-routes",
             results,
         })
     } catch (error) {
@@ -527,15 +523,15 @@ server.post("/accounts/test-models", async (c) => {
             const summary = summarizeUpstreamError(error)
             return c.json({
                 success: false,
-                provider,
-                accountId,
+                provider: provider || "all",
+                accountId: accountId || "flow-routes",
                 error: summary.message,
             })
         }
         return c.json({
             success: false,
-            provider,
-            accountId,
+            provider: provider || "all",
+            accountId: accountId || "flow-routes",
             error: (error as Error).message,
         })
     }

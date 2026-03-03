@@ -109,5 +109,12 @@ export function getKeyLabel(key: string): string | null {
     return entry?.label || null
 }
 
+/** Get a valid API key for internal use (admin key or first generated key) */
+export function getInternalKey(): string | null {
+    if (store.adminKey) return store.adminKey
+    if (store.keys.length > 0) return store.keys[0].key
+    return null
+}
+
 // Initialize on module load
 loadKeys()
