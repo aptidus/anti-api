@@ -15,6 +15,128 @@ const PING_MESSAGES: ClaudeMessage[] = [
     { role: "user", content: "ping" },
 ]
 
+// Tool-calling test: asks model to use a tool
+const TEST_TOOL: { name: string; description: string; input_schema: any } = {
+    name: "get_weather",
+    description: "Get the current weather for a location",
+    input_schema: {
+        type: "object",
+        properties: {
+            location: { type: "string", description: "City name" },
+        },
+        required: ["location"],
+    },
+}
+
+const TOOL_TEST_MESSAGES: ClaudeMessage[] = [
+    { role: "user", content: "What's the weather in Tokyo? Use the get_weather tool." },
+]
+
+export interface ModelTestResult {
+    modelId: string
+    agentic: boolean
+    toolCall: boolean
+    thinking: boolean
+    latencyMs: number
+    error?: string
+}
+
+/**
+ * Test all models for a given account: agentic mode, tool calling, and thinking support
+ */
+export async function testAccountModels(
+    provider: AuthProvider,
+    accountId: string
+): Promise<ModelTestResult[]> {
+    const routingModels = getRoutingModelsForAccount(provider, accountId)
+    const antigravityModels = provider === "antigravity"
+        ? await getAntigravityPingCandidates(accountId)
+        : []
+
+    // Combine and deduplicate
+    const candidates = [...routingModels, ...antigravityModels].filter(Boolean)
+    const seen = new Set<string>()
+    const uniqueModels = candidates.filter(id => {
+        if (seen.has(id)) return false
+        seen.add(id)
+        return true
+    })
+
+    if (uniqueModels.length === 0) {
+        throw new Error(`No models available for provider "${provider}"`)
+    }
+
+    const account = provider === "antigravity" ? null : authStore.getAccount(provider, accountId)
+    if (provider !== "antigravity" && !account) {
+        throw new Error(`Account not found: ${accountId}`)
+    }
+
+    const results: ModelTestResult[] = []
+
+    for (const modelId of uniqueModels) {
+        const result: ModelTestResult = {
+            modelId,
+            agentic: false,
+            toolCall: false,
+            thinking: false,
+            latencyMs: 0,
+        }
+
+        const start = Date.now()
+
+        try {
+            if (provider === "antigravity") {
+                const response = await createChatCompletionWithOptions(
+                    {
+                        model: modelId,
+                        messages: TOOL_TEST_MESSAGES,
+                        tools: [TEST_TOOL],
+                        toolChoice: { type: "auto" },
+                        maxTokens: 256,
+                    },
+                    { accountId, allowRotation: false }
+                )
+
+                result.agentic = true
+                result.latencyMs = Date.now() - start
+
+                // Check if model made a tool call
+                if (response.contentBlocks?.some(b => b.type === "tool_use")) {
+                    result.toolCall = true
+                }
+
+                // Check if model supports thinking (by model name pattern)
+                const lm = modelId.toLowerCase()
+                result.thinking = lm.includes("thinking") || lm.includes("gemini-2.5-pro") ||
+                    lm.includes("gemini-2-5-pro") || lm.includes("gemini-3-1-pro") ||
+                    lm.includes("gemini-3-pro") || lm.includes("claude-sonnet-4-6") ||
+                    lm.includes("claude-sonnet-4.6")
+            } else if (provider === "codex") {
+                await createCodexCompletion(account!, modelId, TOOL_TEST_MESSAGES, [TEST_TOOL], 256)
+                result.agentic = true
+                result.toolCall = true // codex always supports tools if it responds
+                result.latencyMs = Date.now() - start
+                result.thinking = modelId.toLowerCase().includes("thinking") || modelId.toLowerCase().includes("o1") || modelId.toLowerCase().includes("o3")
+            } else if (provider === "copilot") {
+                await createCopilotCompletion(account!, modelId, TOOL_TEST_MESSAGES, [TEST_TOOL], 256)
+                result.agentic = true
+                result.toolCall = true
+                result.latencyMs = Date.now() - start
+                result.thinking = modelId.toLowerCase().includes("thinking") || modelId.toLowerCase().includes("o1") || modelId.toLowerCase().includes("o3")
+            }
+        } catch (error) {
+            result.latencyMs = Date.now() - start
+            result.error = error instanceof UpstreamError
+                ? `${error.status}: ${error.message}`.slice(0, 200)
+                : (error as Error).message?.slice(0, 200) || "Unknown error"
+        }
+
+        results.push(result)
+    }
+
+    return results
+}
+
 export async function pingAccount(
     provider: AuthProvider,
     accountId: string,

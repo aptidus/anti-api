@@ -1529,6 +1529,67 @@
             }
         }
 
+        async function testAccountModels(provider, accountId, btnEl) {
+            if (btnEl && btnEl.dataset.testing === 'true') return;
+            if (btnEl) {
+                btnEl.dataset.testing = 'true';
+                btnEl.textContent = '...';
+                btnEl.classList.add('animate-pulse');
+            }
+
+            // Find the card and results container
+            const card = btnEl?.closest('.card-3d');
+            const cardId = card?.dataset.cardId;
+            const resultsDiv = cardId ? document.getElementById(`test-results-${cardId}`) : null;
+
+            try {
+                const response = await fetch(`${API_BASE}/accounts/test-models`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ provider, accountId })
+                });
+                const data = await response.json();
+
+                if (data.success && data.results && resultsDiv) {
+                    resultsDiv.classList.remove('hidden');
+                    resultsDiv.innerHTML = data.results.map(r => {
+                        const check = '✓';
+                        const cross = '✗';
+                        const agenticIcon = r.agentic ? `<span class="text-emerald-400">${check}</span>` : `<span class="text-red-400">${cross}</span>`;
+                        const toolIcon = r.toolCall ? `<span class="text-emerald-400">${check}</span>` : `<span class="text-red-400">${cross}</span>`;
+                        const thinkIcon = r.thinking ? `<span class="text-emerald-400">${check}</span>` : `<span class="text-gray-600">—</span>`;
+                        const latency = (r.latencyMs / 1000).toFixed(1);
+                        const errorHtml = r.error ? `<div class="text-[9px] text-red-400 truncate mt-0.5">${r.error}</div>` : '';
+                        // Shorten model name for display
+                        const shortModel = r.modelId.replace('claude-', '').replace('gemini-', 'g-');
+                        return `
+                            <div class="flex items-center justify-between text-[10px] py-1 border-t border-gray-800/50">
+                                <span class="text-gray-400 font-mono truncate max-w-[120px]" title="${r.modelId}">${shortModel}</span>
+                                <div class="flex items-center gap-2 text-[10px]">
+                                    <span title="Agentic">${agenticIcon}</span>
+                                    <span title="Tool Call">${toolIcon}</span>
+                                    <span title="Thinking">${thinkIcon}</span>
+                                    <span class="text-gray-500 w-8 text-right">${latency}s</span>
+                                </div>
+                            </div>
+                            ${errorHtml}
+                        `;
+                    }).join('');
+                    showToast(`Tested ${data.results.length} model(s)`);
+                } else if (data.error) {
+                    showToast(`Test failed: ${data.error}`);
+                }
+            } catch (error) {
+                showToast(`Test error: ${error.message}`);
+            } finally {
+                if (btnEl) {
+                    btnEl.dataset.testing = 'false';
+                    btnEl.textContent = 'test';
+                    btnEl.classList.remove('animate-pulse');
+                }
+            }
+        }
+
         function hashId(input) {
             let hash = 0;
             const str = String(input || '');
@@ -1693,11 +1754,14 @@
                                 <div class="text-sm font-bold text-gray-300">${maskedName}</div>
                             </div>
                             <div class="flex items-center gap-2">
+                                <button onclick="event.stopPropagation(); testAccountModels('${provider}', '${account.accountId}', this)"
+                                        class="text-gray-600 hover:text-emerald-400 transition-colors text-[10px] px-1 font-mono" title="Test models">test</button>
                                 <button onclick="event.stopPropagation(); deleteAccount('${account.accountId}', '${displayName}')"
                                         class="text-gray-600 hover:text-red-500 transition-colors text-xs px-1" title="Remove account">✕</button>
                             </div>
                         </div>
                         <div class="space-y-4">${barHtml}</div>
+                        <div id="test-results-${cardId}" class="mt-3 hidden"></div>
                     </div>
                 </div>
             `;

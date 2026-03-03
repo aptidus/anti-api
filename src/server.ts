@@ -22,7 +22,7 @@ import { loadRoutingConfig } from "./services/routing/config"
 import { getProviderModels } from "./services/routing/models"
 import { importCodexAuthSources, removeCodexAuthArtifacts } from "./services/codex/oauth"
 import { loadSettings, saveSettings } from "./services/settings"
-import { pingAccount } from "./services/ping"
+import { pingAccount, testAccountModels } from "./services/ping"
 import { summarizeUpstreamError, UpstreamError } from "./lib/error"
 import { authStore } from "./services/auth/store"
 
@@ -476,6 +476,52 @@ server.post("/accounts/ping", async (c) => {
             provider,
             accountId,
             modelId: modelId || null,
+            error: (error as Error).message,
+        })
+    }
+})
+
+// Test all models for a specific account (agentic, tool calling, thinking)
+server.post("/accounts/test-models", async (c) => {
+    let body: { provider?: string; accountId?: string } = {}
+    try {
+        body = await c.req.json()
+    } catch {
+        body = {}
+    }
+
+    const provider = (body.provider || "").toLowerCase()
+    const accountId = body.accountId || ""
+
+    if (!provider || !accountId) {
+        return c.json({ success: false, error: "provider and accountId are required" }, 400)
+    }
+    if (!["antigravity", "codex", "copilot"].includes(provider)) {
+        return c.json({ success: false, error: "Unsupported provider" }, 400)
+    }
+
+    try {
+        const results = await testAccountModels(provider as any, accountId)
+        return c.json({
+            success: true,
+            provider,
+            accountId,
+            results,
+        })
+    } catch (error) {
+        if (error instanceof UpstreamError) {
+            const summary = summarizeUpstreamError(error)
+            return c.json({
+                success: false,
+                provider,
+                accountId,
+                error: summary.message,
+            })
+        }
+        return c.json({
+            success: false,
+            provider,
+            accountId,
             error: (error as Error).message,
         })
     }
