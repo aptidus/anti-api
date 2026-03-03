@@ -99,7 +99,7 @@ export async function testAccountModels(
                         model: modelId,
                         messages: TOOL_TEST_MESSAGES,
                         tools: [TEST_TOOL],
-                        toolChoice: { type: "auto" },
+                        toolChoice: { type: "any" },
                         maxTokens: 256,
                     },
                     { accountId, allowRotation: false }
@@ -108,11 +108,9 @@ export async function testAccountModels(
                 result.agentic = true
                 result.latencyMs = Date.now() - start
 
-                // Debug: log content blocks for models that don't return tool_use
+                // Debug: always log tool call test results
                 const hasToolUse = response.contentBlocks?.some(b => b.type === "tool_use")
-                if (!hasToolUse) {
-                    console.log(`[ping] ${modelId}: no tool_use in response. Blocks: ${JSON.stringify(response.contentBlocks?.map(b => ({ type: b.type, name: (b as any).name, text: b.type === "text" ? (b as any).text?.slice(0, 200) : undefined })))}`)
-                }
+                console.log(`[ping] ${modelId}: tool_use=${hasToolUse} blocks=${JSON.stringify(response.contentBlocks?.map(b => ({ type: b.type, name: (b as any).name, text: b.type === "text" ? (b as any).text?.slice(0, 100) : undefined })))}`)
                 if (hasToolUse) {
                     result.toolCall = true
                 }
