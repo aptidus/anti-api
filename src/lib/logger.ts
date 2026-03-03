@@ -5,17 +5,17 @@
 
 const SEPARATOR = "================================"
 
-// Provider display names
+// Provider display names (no internal/branded names)
 const PROVIDER_NAMES: Record<string, string> = {
     copilot: "GitHub Copilot",
     codex: "ChatGPT Codex",
-    antigravity: "Antigravity",
+    antigravity: "Cloud",
 }
 
 const PROVIDER_LABELS: Record<string, string> = {
     copilot: "Copilot",
     codex: "Codex",
-    antigravity: "Antigravity",
+    antigravity: "Cloud",
 }
 
 // Request context for logging (set by router, read by middleware)

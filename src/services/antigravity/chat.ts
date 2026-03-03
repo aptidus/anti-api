@@ -607,7 +607,7 @@ async function sendRequestSse(
                     // Log 200 success with actual account used and elapsed time (green)
                     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
                     const account = currentAccountId ? await accountManager.getAccountById(currentAccountId) : null
-                    const accountDisplay = account?.email || currentAccountId || "-"
+                    const accountDisplay = account?.label || `Account ${(currentAccountId || "").slice(-4)}` || "-"
                     console.log(formatSuccessLine({
                         elapsed,
                         model: modelName || "unknown",
@@ -969,7 +969,7 @@ async function* sendRequestSseStreaming(
                 // 成功完成 - 在 return 之前记录日志
                 const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
                 const account = currentAccountId ? await accountManager.getAccountById(currentAccountId) : null
-                const accountDisplay = account?.email || currentAccountId || "-"
+                const accountDisplay = account?.label || `Account ${(currentAccountId || "").slice(-4)}` || "-"
                 console.log(formatSuccessLine({
                     elapsed,
                     model: modelName || "unknown",
@@ -1047,7 +1047,7 @@ export async function createChatCompletionWithOptions(
     let accessToken: string
     let accountId: string | undefined
     let projectId: string | undefined
-    let accountEmail: string | undefined
+    let accountDisplay: string | undefined
     let releaseAccountLock: (() => void) | null = null
 
     if (options.accountId) {
@@ -1058,25 +1058,25 @@ export async function createChatCompletionWithOptions(
         accessToken = account.accessToken
         accountId = account.accountId
         projectId = account.projectId
-        accountEmail = account.email
+        accountDisplay = account.label || `Account ${(account.accountId || "").slice(-4)}`
     } else {
         const account = await accountManager.getNextAvailableAccount()
         if (account) {
             accessToken = account.accessToken
             accountId = account.accountId
             projectId = account.projectId
-            accountEmail = account.email
+            accountDisplay = account.label || `Account ${(account.accountId || "").slice(-4)}`
         } else {
             accessToken = await getAccessToken()
             projectId = state.cloudaicompanionProject || undefined
-            accountEmail = state.userEmail || undefined
+            accountDisplay = "default"
         }
     }
 
     // Set log context for request logging
-    setRequestLogContext({ model: request.model, provider: "antigravity", account: accountEmail, routeTag: options.routeTag })
+    setRequestLogContext({ model: request.model, provider: "antigravity", account: accountDisplay, routeTag: options.routeTag })
 
-    setRequestLogContext({ model: request.model, provider: "antigravity", account: accountEmail, routeTag: options.routeTag })
+    setRequestLogContext({ model: request.model, provider: "antigravity", account: accountDisplay, routeTag: options.routeTag })
 
     if (accountId) {
         releaseAccountLock = await accountManager.acquireAccountLock(accountId)
@@ -1135,7 +1135,7 @@ export async function* createChatCompletionStreamWithOptions(
     let accessToken: string
     let accountId: string | undefined
     let projectId: string | undefined
-    let accountEmail: string | undefined
+    let accountDisplay: string | undefined
     let releaseAccountLock: (() => void) | null = null
 
     if (options.accountId) {
@@ -1146,18 +1146,18 @@ export async function* createChatCompletionStreamWithOptions(
         accessToken = account.accessToken
         accountId = account.accountId
         projectId = account.projectId
-        accountEmail = account.email
+        accountDisplay = account.label || `Account ${(account.accountId || "").slice(-4)}`
     } else {
         const account = await accountManager.getNextAvailableAccount()
         if (account) {
             accessToken = account.accessToken
             accountId = account.accountId
             projectId = account.projectId
-            accountEmail = account.email
+            accountDisplay = account.label || `Account ${(account.accountId || "").slice(-4)}`
         } else {
             accessToken = await getAccessToken()
             projectId = state.cloudaicompanionProject || undefined
-            accountEmail = state.userEmail || undefined
+            accountDisplay = "default"
         }
     }
 

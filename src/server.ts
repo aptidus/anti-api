@@ -378,8 +378,8 @@ const modelsHandler = (c: any) => {
         const providers = providersByModel.get(m.id) || []
         const isOverlapping = providers.length > 1
         const suffixedId = isOverlapping ? `${m.id}@${m.provider}` : m.id
-        const displayName = `${m.name} [${m.provider}]`
-        return { id: suffixedId, name: displayName, owned_by: m.provider }
+        const displayName = m.name
+        return { id: suffixedId, name: displayName, owned_by: "cloud" }
     })
 
     // Add flow routing models at the end

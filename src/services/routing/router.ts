@@ -216,7 +216,7 @@ function buildAutoEntriesForProvider(provider: AuthProvider): AccountRoutingEntr
         id: crypto.randomUUID(),
         provider,
         accountId: account.id,
-        accountLabel: account.label || account.email || account.login || account.id,
+        accountLabel: account.label || `Account ${(account.id).slice(-4)}`,
     }))
 }
 
@@ -282,7 +282,7 @@ function resolveAccountRoutingEntries(config: RoutingConfig, model: string): Acc
 
 function getAccountDisplay(provider: AuthProvider, accountId: string): string {
     const account = authStore.getAccount(provider, accountId)
-    return account?.login || account?.email || account?.label || accountId
+    return account?.label || `Account ${(account?.id || accountId).slice(-4)}`
 }
 
 const FALLBACK_STATUSES = new Set([401, 403, 408, 429, 500, 503, 529])
@@ -519,7 +519,7 @@ async function createFlowCompletionWithEntries(request: RoutedRequest, entries: 
         if (!account) {
             throw new Error("Account not found")
         }
-        const accountDisplay = account.login || account.email || entry.accountId
+        const accountDisplay = account.label || `Account ${(account.id || entry.accountId).slice(-4)}`
         setRequestLogContext({ model: entry.modelId, provider: entry.provider, account: accountDisplay, routeTag: "fr" })
 
         if (entry.provider === "codex") {
@@ -646,7 +646,7 @@ async function createFlowCompletionWithEntries(request: RoutedRequest, entries: 
             if (!account) {
                 throw new Error("Account not found")
             }
-            const accountDisplay = account.login || account.email || entry.accountId
+            const accountDisplay = account.label || `Account ${(account.id || entry.accountId).slice(-4)}`
             setRequestLogContext({ model: entry.modelId, provider: entry.provider, account: accountDisplay, routeTag: "fr" })
 
             if (entry.provider === "codex") {
@@ -714,7 +714,7 @@ async function createAccountCompletionWithEntries(request: RoutedRequest, entrie
             if (!account) {
                 continue
             }
-            const accountDisplay = account.login || account.email || entry.accountId
+            const accountDisplay = account.label || `Account ${(account.id || entry.accountId).slice(-4)}`
             setRequestLogContext({ model: request.model, provider: entry.provider, account: accountDisplay, routeTag: "ar" })
 
             if (entry.provider === "codex") {
@@ -841,7 +841,7 @@ async function* createFlowCompletionStreamWithEntries(request: RoutedRequest, en
         if (!account) {
             throw new Error("Account not found")
         }
-        const accountDisplay = account.login || account.email || entry.accountId
+        const accountDisplay = account.label || `Account ${(account.id || entry.accountId).slice(-4)}`
         setRequestLogContext({ model: entry.modelId, provider: entry.provider, account: accountDisplay, routeTag: "fr" })
 
         let completion
@@ -996,7 +996,7 @@ async function* createFlowCompletionStreamWithEntries(request: RoutedRequest, en
         if (!account) {
             throw new Error("Account not found")
         }
-        const accountDisplay = account.login || account.email || entry.accountId
+        const accountDisplay = account.label || `Account ${(account.id || entry.accountId).slice(-4)}`
         setRequestLogContext({ model: entry.modelId, provider: entry.provider, account: accountDisplay, routeTag: "fr" })
 
         let completion
@@ -1087,7 +1087,7 @@ async function* createAccountCompletionStreamWithEntries(request: RoutedRequest,
             if (!account) {
                 continue
             }
-            const accountDisplay = account.login || account.email || entry.accountId
+            const accountDisplay = account.label || `Account ${(account.id || entry.accountId).slice(-4)}`
             setRequestLogContext({ model: request.model, provider: entry.provider, account: accountDisplay, routeTag: "ar" })
 
             let completion

@@ -16,7 +16,7 @@ export const routingRouter = new Hono()
 function resolveAccountLabel(provider: AuthProvider, accountId: string, fallback?: string): string {
     if (accountId === "auto") return "auto"
     const account = authStore.getAccount(provider, accountId)
-    return account?.label || account?.email || account?.login || fallback || accountId
+    return account?.label || fallback || `Account ${accountId.slice(-4)}`
 }
 
 function syncFlowLabels(flows: RoutingFlow[]): RoutingFlow[] {
@@ -61,9 +61,7 @@ function toSummary(account: ProviderAccount): ProviderAccountSummary {
     return {
         id: account.id,
         provider: account.provider,
-        displayName: account.label || account.email || account.login || account.id,
-        email: account.email,
-        login: account.login,
+        displayName: account.label || `Account ${account.id.slice(-4)}`,
         label: account.label,
         expiresAt: account.expiresAt,
     }
