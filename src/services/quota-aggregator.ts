@@ -124,7 +124,7 @@ function defaultCopilotBars(): AccountBar[] {
 
 function buildCachedViews(provider: QuotaCacheEntry["provider"], accounts: ProviderAccount[]): AccountQuotaView[] {
     return accounts.map(account => {
-        const displayName = account.email || account.login || account.id
+        const displayName = account.label || `Account ${account.id.slice(-4)}`
         const cachedBars = getCachedBars(provider, account.id)
         const bars = cachedBars || (
             provider === "antigravity"
@@ -202,14 +202,14 @@ async function fetchAntigravityQuotas(accounts: ProviderAccount[]): Promise<Acco
                 updateQuotaCache({
                     provider: "antigravity",
                     accountId: account.id,
-                    displayName: account.email || account.id,
+                    displayName: account.label || `Account ${account.id.slice(-4)}`,
                     bars,
                     updatedAt: new Date().toISOString(),
                 })
                 return {
                     provider: "antigravity" as const,
                     accountId: account.id,
-                    displayName: account.email || account.id,
+                    displayName: account.label || `Account ${account.id.slice(-4)}`,
                     bars,
                 }
             } catch (error) {
@@ -231,14 +231,14 @@ async function fetchAntigravityQuotas(accounts: ProviderAccount[]): Promise<Acco
             return {
                 provider: "antigravity" as const,
                 accountId: account.id,
-                displayName: account.email || account.id,
+                displayName: account.label || `Account ${account.id.slice(-4)}`,
                 bars: cachedBars,
             }
         }
         return {
             provider: "antigravity" as const,
             accountId: account.id,
-            displayName: account.email || account.id,
+            displayName: account.label || `Account ${account.id.slice(-4)}`,
             bars: buildAntigravityBars({}),
         }
     })
@@ -325,9 +325,9 @@ function buildAntigravityBars(models: Record<string, ModelInfo>): AccountBar[] {
     const gflashIds = ["gemini-3-flash", "gemini-3.1-flash-image"]
 
     return [
-        buildMergedBar("claude_gpt", "claude&gpt", models, claudeGptIds),
-        buildMergedBar("gpro", "gpro", models, gproIds),
-        buildMergedBar("gflash", "gflash", models, gflashIds),
+        buildMergedBar("claude_gpt", "Opus-Latest", models, claudeGptIds),
+        buildMergedBar("gpro", "Pro-Latest", models, gproIds),
+        buildMergedBar("gflash", "Flash-Latest", models, gflashIds),
     ]
 }
 
@@ -368,14 +368,14 @@ async function fetchCodexQuotas(accounts: ProviderAccount[]): Promise<AccountQuo
             updateQuotaCache({
                 provider: "codex",
                 accountId: account.id,
-                displayName: account.email || account.id,
+                displayName: account.label || `Account ${account.id.slice(-4)}`,
                 bars: quota,
                 updatedAt: new Date().toISOString(),
             })
             return {
                 provider: "codex" as const,
                 accountId: account.id,
-                displayName: account.email || account.id,
+                displayName: account.label || `Account ${account.id.slice(-4)}`,
                 bars: quota,
             }
         } catch (error) {
@@ -387,14 +387,14 @@ async function fetchCodexQuotas(accounts: ProviderAccount[]): Promise<AccountQuo
                 return {
                     provider: "codex" as const,
                     accountId: account.id,
-                    displayName: account.email || account.id,
+                    displayName: account.label || `Account ${account.id.slice(-4)}`,
                     bars: cachedBars,
                 }
             }
             return {
                 provider: "codex" as const,
                 accountId: account.id,
-                displayName: account.email || account.id,
+                displayName: account.label || `Account ${account.id.slice(-4)}`,
                 bars: [
                     { key: "session", label: "5h", percentage: 0 },
                     { key: "week", label: "week", percentage: 0 },
@@ -461,14 +461,14 @@ async function fetchCopilotQuotas(accounts: ProviderAccount[]): Promise<AccountQ
             updateQuotaCache({
                 provider: "copilot",
                 accountId: account.id,
-                displayName: account.login || account.id,
+                displayName: account.label || `Account ${account.id.slice(-4)}`,
                 bars: [bar],
                 updatedAt: new Date().toISOString(),
             })
             return {
                 provider: "copilot" as const,
                 accountId: account.id,
-                displayName: account.login || account.id,
+                displayName: account.label || `Account ${account.id.slice(-4)}`,
                 bars: [bar],
             }
         } catch (error) {
@@ -478,14 +478,14 @@ async function fetchCopilotQuotas(accounts: ProviderAccount[]): Promise<AccountQ
                 return {
                     provider: "copilot" as const,
                     accountId: account.id,
-                    displayName: account.login || account.id,
+                    displayName: account.label || `Account ${account.id.slice(-4)}`,
                     bars: cachedBars,
                 }
             }
             return {
                 provider: "copilot" as const,
                 accountId: account.id,
-                displayName: account.login || account.id,
+                displayName: account.label || `Account ${account.id.slice(-4)}`,
                 bars: [{ key: "premium", label: "premium", percentage: 0 }],
             }
         }
@@ -721,7 +721,7 @@ async function fetchAnthropicQuotas(accounts: ProviderAccount[]): Promise<Accoun
                 updateQuotaCache({
                     provider: "anthropic",
                     accountId: account.id,
-                    displayName: account.email || account.id,
+                    displayName: account.label || `Account ${account.id.slice(-4)}`,
                     bars,
                     updatedAt: rateLimits.updatedAt,
                 })
@@ -729,7 +729,7 @@ async function fetchAnthropicQuotas(accounts: ProviderAccount[]): Promise<Accoun
                 return {
                     provider: "anthropic" as const,
                     accountId: account.id,
-                    displayName: account.email || account.id,
+                    displayName: account.label || `Account ${account.id.slice(-4)}`,
                     bars,
                 }
             }
@@ -762,7 +762,7 @@ async function fetchAnthropicQuotas(accounts: ProviderAccount[]): Promise<Accoun
                 updateQuotaCache({
                     provider: "anthropic",
                     accountId: account.id,
-                    displayName: account.email || account.id,
+                    displayName: account.label || `Account ${account.id.slice(-4)}`,
                     bars,
                     updatedAt: usageData.updatedAt,
                 })
@@ -770,7 +770,7 @@ async function fetchAnthropicQuotas(accounts: ProviderAccount[]): Promise<Accoun
                 return {
                     provider: "anthropic" as const,
                     accountId: account.id,
-                    displayName: account.email || account.id,
+                    displayName: account.label || `Account ${account.id.slice(-4)}`,
                     bars,
                 }
             }
@@ -783,14 +783,14 @@ async function fetchAnthropicQuotas(accounts: ProviderAccount[]): Promise<Accoun
                 updateQuotaCache({
                     provider: "anthropic",
                     accountId: account.id,
-                    displayName: account.email || account.id,
+                    displayName: account.label || `Account ${account.id.slice(-4)}`,
                     bars: usageBars,
                     updatedAt: new Date().toISOString(),
                 })
                 return {
                     provider: "anthropic" as const,
                     accountId: account.id,
-                    displayName: account.email || account.id,
+                    displayName: account.label || `Account ${account.id.slice(-4)}`,
                     bars: usageBars,
                 }
             }
@@ -840,7 +840,7 @@ async function fetchAnthropicQuotas(accounts: ProviderAccount[]): Promise<Accoun
                 updateQuotaCache({
                     provider: "anthropic",
                     accountId: account.id,
-                    displayName: account.email || account.id,
+                    displayName: account.label || `Account ${account.id.slice(-4)}`,
                     bars,
                     updatedAt: new Date().toISOString(),
                 })
@@ -848,7 +848,7 @@ async function fetchAnthropicQuotas(accounts: ProviderAccount[]): Promise<Accoun
                 return {
                     provider: "anthropic" as const,
                     accountId: account.id,
-                    displayName: account.email || account.id,
+                    displayName: account.label || `Account ${account.id.slice(-4)}`,
                     bars,
                 }
             }
@@ -863,7 +863,7 @@ async function fetchAnthropicQuotas(accounts: ProviderAccount[]): Promise<Accoun
             updateQuotaCache({
                 provider: "anthropic",
                 accountId: account.id,
-                displayName: account.email || account.id,
+                displayName: account.label || `Account ${account.id.slice(-4)}`,
                 bars: [bar],
                 updatedAt: new Date().toISOString(),
             })
@@ -871,7 +871,7 @@ async function fetchAnthropicQuotas(accounts: ProviderAccount[]): Promise<Accoun
             return {
                 provider: "anthropic" as const,
                 accountId: account.id,
-                displayName: account.email || account.id,
+                displayName: account.label || `Account ${account.id.slice(-4)}`,
                 bars: [bar],
             }
         } catch (error) {
@@ -880,7 +880,7 @@ async function fetchAnthropicQuotas(accounts: ProviderAccount[]): Promise<Accoun
             return {
                 provider: "anthropic" as const,
                 accountId: account.id,
-                displayName: account.email || account.id,
+                displayName: account.label || `Account ${account.id.slice(-4)}`,
                 bars: cachedBars || [{ key: "status", label: "status", percentage: 0 }],
             }
         }
