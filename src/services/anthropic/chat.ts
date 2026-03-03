@@ -137,6 +137,17 @@ function captureRateLimitHeaders(accountId: string, response: Response): void {
         }
         rateLimitCache.set(accountId, data)
         consola.info(`[anthropic] Rate limits: req ${data.requestsRemaining}/${data.requestsLimit}, tok ${data.tokensRemaining}/${data.tokensLimit}`)
+    } else {
+        // Log all response headers to discover what OAuth/Max accounts return
+        const allHeaders: Record<string, string> = {}
+        response.headers.forEach((value, key) => {
+            if (key.includes("ratelimit") || key.includes("rate-limit") || key.includes("limit") || key.includes("retry") || key.includes("usage")) {
+                allHeaders[key] = value
+            }
+        })
+        if (Object.keys(allHeaders).length > 0) {
+            consola.info(`[anthropic] Response headers (rate-related) for ${accountId}:`, JSON.stringify(allHeaders))
+        }
     }
 }
 
