@@ -457,7 +457,7 @@ server.delete("/accounts/:id", async (c) => {
     // 这覆盖了 token 过期或通过其他方式添加的账号
     if (!success) {
         // 尝试所有 provider 类型
-        for (const provider of ["antigravity", "codex", "copilot"] as const) {
+        for (const provider of ["antigravity", "codex", "copilot", "anthropic"] as const) {
             if (authStore.deleteAccount(provider, accountId)) {
                 success = true
                 break
