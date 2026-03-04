@@ -105,7 +105,7 @@ if (API_SECRET) {
         }
 
         // Dashboard & admin routes: check cookie or ?key= param
-        const dashboardPaths = ["/", "/quota", "/api-docs.pdf", "/remote-panel", "/routing", "/settings", "/logs"]
+        const dashboardPaths = ["/", "/quota", "/docs.html", "/remote-panel", "/routing", "/settings", "/logs"]
         const isDashboard = dashboardPaths.some(p => path === p || path.startsWith(p + "/"))
         const isApi = path.startsWith("/auth/") || path.startsWith("/remote/") || path.startsWith("/routing/")
             || path.startsWith("/accounts") || path.startsWith("/quota/") || path.startsWith("/bundle/")
@@ -386,16 +386,15 @@ server.get("/quota", async (c) => {
     }
 })
 
-// API Documentation PDF Download
-server.get("/api-docs.pdf", async (c) => {
+// API Documentation Page
+server.get("/docs.html", async (c) => {
     try {
-        const pdfPath = join(import.meta.dir, "../public/api-docs.pdf")
-        const pdf = readFileSync(pdfPath)
-        c.header("Content-Type", "application/pdf")
-        c.header("Content-Disposition", 'attachment; filename="anti-api-docs.pdf"')
-        return c.body(pdf)
+        const htmlPath = join(import.meta.dir, "../public/docs.html")
+        const html = readFileSync(htmlPath, "utf-8")
+        c.header("Content-Type", "text/html; charset=utf-8")
+        return c.body(html)
     } catch (error) {
-        return c.text("PDF not found", 404)
+        return c.text("Documentation not found", 404)
     }
 })
 

@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spear Proxy Documentation</title>
+    <title>Spear Agents Documentation</title>
     <style>
         * {
             margin: 0;
@@ -290,7 +290,7 @@
 <body>
     <div class="container">
 
-        <h1>Spear Proxy Documentation</h1>
+        <h1>Spear Agents Documentation</h1>
 
         <div class="lang-toggle">
             <button class="lang-btn active" onclick="setLang('en')">English</button>
@@ -315,11 +315,11 @@ API Key:  Authorization: Bearer ak-YOUR_API_KEY</pre>
         <!-- ============ MODELS ============ -->
         <div class="en">
             <h2>Available Models (Flow Routes)</h2>
-            <p>Spear Proxy uses <strong>flow route model IDs</strong> — semantic names without version numbers. Each route maps to upstream provider chains with automatic failover and load balancing.</p>
+            <p>Spear Agents uses <strong>flow route model IDs</strong> — semantic names without version numbers. Each route maps to upstream provider chains with automatic failover and load balancing.</p>
         </div>
         <div class="cn">
             <h2>可用模型（流式路由）</h2>
-            <p>Spear Proxy 使用<strong>流式路由模型 ID</strong> — 无版本号的语义名称。每个路由映射到上游提供商链，支持自动故障转移和负载均衡。</p>
+            <p>Spear Agents 使用<strong>流式路由模型 ID</strong> — 无版本号的语义名称。每个路由映射到上游提供商链，支持自动故障转移和负载均衡。</p>
         </div>
         <table>
             <thead>
@@ -362,7 +362,7 @@ API Key:  Authorization: Bearer ak-YOUR_API_KEY</pre>
         <!-- ============ OPENCLAW SETUP ============ -->
         <div class="en">
             <h2>OpenClaw Setup (Step-by-Step)</h2>
-            <p>Follow these steps to connect OpenClaw to Spear Proxy:</p>
+            <p>Follow these steps to connect OpenClaw to Spear Agents:</p>
 
             <div class="step">
                 <span class="step-num">1</span><strong>Install OpenClaw</strong> (if not already installed)
@@ -377,14 +377,14 @@ API Key:  Authorization: Bearer ak-YOUR_API_KEY</pre>
             </div>
 
             <div class="step">
-                <span class="step-num">3</span><strong>Add the Spear Proxy provider</strong>
+                <span class="step-num">3</span><strong>Add the Spear Agents provider</strong>
                 <p>Paste this into your <code>openclaw.json</code>. Replace <code>ak-YOUR_KEY</code> with your actual
                     API key:</p>
                 <pre>{
   "models": {
     "mode": "merge",
     "providers": {
-      "spear-proxy": {
+      "spear-agents": {
         "baseUrl": "https://anti-api-proxy-production.up.railway.app/v1",
         "apiKey": "ak-YOUR_KEY",
         "api": "openai-completions",
@@ -401,7 +401,7 @@ API Key:  Authorization: Bearer ak-YOUR_API_KEY</pre>
   "agents": {
     "defaults": {
       "model": {
-        "primary": "spear-proxy/Opus-thinking"
+        "primary": "spear-agents/Opus-thinking"
       }
     }
   }
@@ -416,18 +416,18 @@ API Key:  Authorization: Bearer ak-YOUR_API_KEY</pre>
             <div class="step">
                 <span class="step-num">5</span><strong>Verify it works</strong>
                 <pre>openclaw agent --local -m "Hello, what model are you?" --session-id test --json</pre>
-                <p>You should see <code>"provider": "spear-proxy"</code> in the output.</p>
+                <p>You should see <code>"provider": "spear-agents"</code> in the output.</p>
             </div>
 
             <div class="tip">
                 <strong>Tools work natively.</strong> OpenClaw's built-in tools (file read/write, web search, process,
-                etc.) work out of the box with all Spear Proxy models — no extra configuration needed.
+                etc.) work out of the box with all Spear Agents models — no extra configuration needed.
             </div>
         </div>
 
         <div class="cn">
             <h2>OpenClaw 配置教程（分步指南）</h2>
-            <p>按以下步骤将 OpenClaw 连接到 Spear Proxy：</p>
+            <p>按以下步骤将 OpenClaw 连接到 Spear Agents：</p>
 
             <div class="step">
                 <span class="step-num">1</span><strong>安装 OpenClaw</strong>（如果尚未安装）
@@ -441,13 +441,13 @@ API Key:  Authorization: Bearer ak-YOUR_API_KEY</pre>
             </div>
 
             <div class="step">
-                <span class="step-num">3</span><strong>添加 Spear Proxy 提供商</strong>
+                <span class="step-num">3</span><strong>添加 Spear Agents 提供商</strong>
                 <p>将以下内容粘贴到 <code>openclaw.json</code> 中，将 <code>ak-YOUR_KEY</code> 替换为你的 API 密钥：</p>
                 <pre>{
   "models": {
     "mode": "merge",
     "providers": {
-      "spear-proxy": {
+      "spear-agents": {
         "baseUrl": "https://anti-api-proxy-production.up.railway.app/v1",
         "apiKey": "ak-YOUR_KEY",
         "api": "openai-completions",
@@ -464,7 +464,7 @@ API Key:  Authorization: Bearer ak-YOUR_API_KEY</pre>
   "agents": {
     "defaults": {
       "model": {
-        "primary": "spear-proxy/Opus-thinking"
+        "primary": "spear-agents/Opus-thinking"
       }
     }
   }
@@ -479,7 +479,7 @@ API Key:  Authorization: Bearer ak-YOUR_API_KEY</pre>
             <div class="step">
                 <span class="step-num">5</span><strong>验证是否生效</strong>
                 <pre>openclaw agent --local -m "Hello, what model are you?" --session-id test --json</pre>
-                <p>输出中应包含 <code>"provider": "spear-proxy"</code>。</p>
+                <p>输出中应包含 <code>"provider": "spear-agents"</code>。</p>
             </div>
 
             <div class="tip">
@@ -492,7 +492,7 @@ API Key:  Authorization: Bearer ak-YOUR_API_KEY</pre>
         <!-- ============ CLAUDE CODE SETUP ============ -->
         <div class="en">
             <h2>Claude Code Setup (Step-by-Step)</h2>
-            <p>Follow these steps to connect Claude Code to Spear Proxy:</p>
+            <p>Follow these steps to connect Claude Code to Spear Agents:</p>
 
             <div class="step">
                 <span class="step-num">1</span><strong>Install Claude Code</strong> (if not already installed)
@@ -539,7 +539,7 @@ export ANTHROPIC_API_KEY="ak-YOUR_KEY"</pre>
 
         <div class="cn">
             <h2>Claude Code 配置教程（分步指南）</h2>
-            <p>按以下步骤将 Claude Code 连接到 Spear Proxy：</p>
+            <p>按以下步骤将 Claude Code 连接到 Spear Agents：</p>
 
             <div class="step">
                 <span class="step-num">1</span><strong>安装 Claude Code</strong>（如果尚未安装）
@@ -676,7 +676,7 @@ export ANTHROPIC_API_KEY="ak-YOUR_KEY"</pre>
 
         <hr>
         <p style="text-align:center; color:#555; font-size:12px; margin-top:40px;">
-            Spear Proxy v2.7.0
+            Spear Agents v1.2.0
         </p>
 
     </div>
