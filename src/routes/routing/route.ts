@@ -16,7 +16,11 @@ export const routingRouter = new Hono()
 function resolveAccountLabel(provider: AuthProvider, accountId: string, fallback?: string): string {
     if (accountId === "auto") return "auto"
     const account = authStore.getAccount(provider, accountId)
-    return account?.label || fallback || `Account ${(accountId || "????").slice(-4)}`
+    if (!account) return fallback || accountId || "unknown"
+    // Prefer email for display
+    if (account.email && account.email !== "anthropic-user") return account.email
+    if (account.label && account.label !== "anthropic-user") return account.label
+    return fallback || accountId || "unknown"
 }
 
 function syncFlowLabels(flows: RoutingFlow[]): RoutingFlow[] {
@@ -58,10 +62,16 @@ function listAccountsInOrder(provider: "antigravity" | "codex" | "copilot" | "an
 }
 
 function toSummary(account: ProviderAccount): ProviderAccountSummary {
+    // Prefer email (most user-recognizable), then label, then id
+    const displayName = (account.email && account.email !== "anthropic-user" ? account.email : null)
+        || (account.label && account.label !== "anthropic-user" ? account.label : null)
+        || (account.id && account.id !== "anthropic-user" ? account.id : null)
+        || "Anthropic Account"
     return {
         id: account.id || "",
         provider: account.provider,
-        displayName: account.label || account.id || "Unknown Account",
+        displayName,
+        email: account.email,
         label: account.label,
         expiresAt: account.expiresAt,
     }

@@ -14,13 +14,16 @@ import { getDataDir } from "~/lib/data-dir"
 
 const FIVE_HOURS_MS = 5 * 60 * 60 * 1000
 
-/** Return account display name — show actual email/label for clarity */
+/** Return account display name — prefer email, then label, then id */
 function safeDisplayName(account: ProviderAccount): string {
+    // Prefer explicit email field (most recognizable to users)
+    if (account.email && account.email !== "anthropic-user") return account.email
+    // Then label (often set to email during OAuth)
     const raw = account.label || ""
-    if (raw) return raw
-    // Fallback: use account id if available
-    if (account.id) return account.id
-    return "Unknown Account"
+    if (raw && raw !== "anthropic-user") return raw
+    // Fallback: use account id
+    if (account.id && account.id !== "anthropic-user") return account.id
+    return "Anthropic Account"
 }
 
 type ModelInfo = AntigravityModelInfo
