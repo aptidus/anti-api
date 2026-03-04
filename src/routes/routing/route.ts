@@ -16,7 +16,7 @@ export const routingRouter = new Hono()
 function resolveAccountLabel(provider: AuthProvider, accountId: string, fallback?: string): string {
     if (accountId === "auto") return "auto"
     const account = authStore.getAccount(provider, accountId)
-    return account?.label || fallback || `Account ${accountId.slice(-4)}`
+    return account?.label || fallback || `Account ${(accountId || "????").slice(-4)}`
 }
 
 function syncFlowLabels(flows: RoutingFlow[]): RoutingFlow[] {
@@ -59,9 +59,9 @@ function listAccountsInOrder(provider: "antigravity" | "codex" | "copilot" | "an
 
 function toSummary(account: ProviderAccount): ProviderAccountSummary {
     return {
-        id: account.id,
+        id: account.id || "",
         provider: account.provider,
-        displayName: account.label || `Account ${account.id.slice(-4)}`,
+        displayName: account.label || `Account ${(account.id || "????").slice(-4)}`,
         label: account.label,
         expiresAt: account.expiresAt,
     }
@@ -78,62 +78,74 @@ routingRouter.get("/", (c) => {
 })
 
 routingRouter.get("/config", async (c) => {
-    accountManager.load()
-    const config = loadRoutingConfig()
-    const syncedConfig = {
-        ...config,
-        flows: syncFlowLabels(config.flows),
-        accountRouting: syncAccountRoutingLabels(config.accountRouting),
-    }
-
-    const antigravityAccounts = listAccountsInOrder("antigravity")
-    const codexAccounts = listAccountsInOrder("codex")
-    const copilotAccounts = listAccountsInOrder("copilot")
-    const anthropicAccounts = listAccountsInOrder("anthropic")
-
-    const primaryCopilotAccount = copilotAccounts.find(account => !!account.accessToken)
-    if (primaryCopilotAccount) {
-        try {
-            const remoteModels = await listCopilotModelsForAccount(primaryCopilotAccount)
-            if (remoteModels.length > 0) {
-                const dynamicModels = remoteModels.map(model => ({
-                    id: model.id,
-                    label: `Copilot - ${model.name?.trim() || model.id}`,
-                }))
-                setDynamicCopilotModels(dynamicModels)
-                consola.debug(`[routing] Copilot models synced (${dynamicModels.length}) from ${primaryCopilotAccount.id}`)
-            } else {
-                consola.debug("[routing] Copilot models sync returned empty list; using fallback")
-            }
-        } catch (error) {
-            const message = error instanceof Error ? error.message : String(error)
-            consola.warn(`[routing] Copilot models sync failed: ${message}`)
-        }
-    }
-
-    const accounts = {
-        antigravity: antigravityAccounts.map(toSummary),
-        codex: codexAccounts.map(toSummary),
-        copilot: copilotAccounts.map(toSummary),
-        anthropic: anthropicAccounts.map(toSummary),
-    }
-
-    const models = {
-        antigravity: antigravityAccounts.length > 0 ? getProviderModels("antigravity") : [],
-        codex: codexAccounts.length > 0 ? getProviderModels("codex") : [],
-        copilot: copilotAccounts.length > 0 ? getProviderModels("copilot") : [],
-        anthropic: anthropicAccounts.length > 0 ? getProviderModels("anthropic") : [],
-    }
-
-    // Get quota data for displaying on model blocks
-    let quota: Awaited<ReturnType<typeof getAggregatedQuota>> | null = null
     try {
-        quota = await getAggregatedQuota()
-    } catch {
-        // Quota fetch is optional, continue without it
-    }
+        accountManager.load()
+        const config = loadRoutingConfig()
+        const syncedConfig = {
+            ...config,
+            flows: syncFlowLabels(config.flows),
+            accountRouting: syncAccountRoutingLabels(config.accountRouting),
+        }
 
-    return c.json({ config: syncedConfig, accounts, models, quota })
+        const antigravityAccounts = listAccountsInOrder("antigravity")
+        const codexAccounts = listAccountsInOrder("codex")
+        const copilotAccounts = listAccountsInOrder("copilot")
+        const anthropicAccounts = listAccountsInOrder("anthropic")
+
+        const primaryCopilotAccount = copilotAccounts.find(account => !!account.accessToken)
+        if (primaryCopilotAccount) {
+            try {
+                const remoteModels = await listCopilotModelsForAccount(primaryCopilotAccount)
+                if (remoteModels.length > 0) {
+                    const dynamicModels = remoteModels.map(model => ({
+                        id: model.id,
+                        label: `Copilot - ${model.name?.trim() || model.id}`,
+                    }))
+                    setDynamicCopilotModels(dynamicModels)
+                    consola.debug(`[routing] Copilot models synced (${dynamicModels.length}) from ${primaryCopilotAccount.id}`)
+                } else {
+                    consola.debug("[routing] Copilot models sync returned empty list; using fallback")
+                }
+            } catch (error) {
+                const message = error instanceof Error ? error.message : String(error)
+                consola.warn(`[routing] Copilot models sync failed: ${message}`)
+            }
+        }
+
+        const accounts = {
+            antigravity: antigravityAccounts.map(toSummary),
+            codex: codexAccounts.map(toSummary),
+            copilot: copilotAccounts.map(toSummary),
+            anthropic: anthropicAccounts.map(toSummary),
+        }
+
+        const models = {
+            antigravity: antigravityAccounts.length > 0 ? getProviderModels("antigravity") : [],
+            codex: codexAccounts.length > 0 ? getProviderModels("codex") : [],
+            copilot: copilotAccounts.length > 0 ? getProviderModels("copilot") : [],
+            anthropic: anthropicAccounts.length > 0 ? getProviderModels("anthropic") : [],
+        }
+
+        // Get quota data for displaying on model blocks
+        let quota: Awaited<ReturnType<typeof getAggregatedQuota>> | null = null
+        try {
+            quota = await getAggregatedQuota()
+        } catch {
+            // Quota fetch is optional, continue without it
+        }
+
+        return c.json({ config: syncedConfig, accounts, models, quota })
+    } catch (error) {
+        consola.error("[routing/config] Fatal error:", error)
+        // Return minimal valid response so the page still renders
+        const config = loadRoutingConfig()
+        return c.json({
+            config: { flows: config.flows || [], accountRouting: config.accountRouting },
+            accounts: { antigravity: [], codex: [], copilot: [], anthropic: [] },
+            models: { antigravity: [], codex: [], copilot: [], anthropic: [] },
+            quota: null,
+        })
+    }
 })
 
 routingRouter.post("/config", async (c) => {
