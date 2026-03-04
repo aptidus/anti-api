@@ -641,18 +641,66 @@ export ANTHROPIC_API_KEY="ak-YOUR_KEY"</pre>
         <hr>
 
         <div class="en">
+            <h2>Extended Thinking</h2>
+            <p>Models with <code>-thinking</code> suffix (e.g. <code>Opus-thinking</code>, <code>Sonnet-thinking</code>) automatically enable extended thinking / chain-of-thought reasoning. The proxy handles this transparently:</p>
+            <ul>
+                <li><strong>OpenAI format</strong> (<code>/v1/chat/completions</code>): Thinking output is returned in <code>reasoning_content</code> field on each choice/delta</li>
+                <li><strong>Anthropic format</strong> (<code>/v1/messages</code>): Thinking blocks are returned natively as <code>thinking</code> content blocks</li>
+                <li>Budget tokens are automatically calculated based on <code>max_tokens</code> (minimum 1024)</li>
+            </ul>
+            <p>No extra parameters needed — just use a <code>-thinking</code> model ID and thinking is enabled automatically.</p>
+        </div>
+        <div class="cn">
+            <h2>扩展思考</h2>
+            <p>后缀为 <code>-thinking</code> 的模型（如 <code>Opus-thinking</code>、<code>Sonnet-thinking</code>）会自动启用扩展思考/链式推理。代理透明处理：</p>
+            <ul>
+                <li><strong>OpenAI 格式</strong>（<code>/v1/chat/completions</code>）：思考输出通过 <code>reasoning_content</code> 字段返回</li>
+                <li><strong>Anthropic 格式</strong>（<code>/v1/messages</code>）：思考块作为 <code>thinking</code> 内容块原生返回</li>
+                <li>预算 token 根据 <code>max_tokens</code> 自动计算（最小 1024）</li>
+            </ul>
+            <p>无需额外参数 — 只需使用 <code>-thinking</code> 模型 ID 即可自动启用。</p>
+        </div>
+
+        <hr>
+
+        <div class="en">
             <h2>Tool Calling</h2>
             <p>All models support OpenAI-style function/tool calling. The proxy automatically cleans unsupported JSON
                 Schema fields (like <code>patternProperties</code>, <code>$ref</code>,
-                <code>additionalProperties</code>) so your existing tool schemas work without modification.
-            </p>
+                <code>additionalProperties</code>) so your existing tool schemas work without modification.</p>
+            <h3>OpenAI Format Example</h3>
         </div>
         <div class="cn">
             <h2>工具调用</h2>
             <p>所有模型都支持 OpenAI 风格的函数/工具调用。代理会自动清理不支持的 JSON Schema 字段（如
-                <code>patternProperties</code>、<code>$ref</code>、<code>additionalProperties</code>），你现有的工具 schema
-                无需修改即可使用。
-            </p>
+                <code>patternProperties</code>、<code>$ref</code>、<code>additionalProperties</code>），无需修改即可使用。</p>
+            <h3>OpenAI 格式示例</h3>
+        </div>
+        <pre>curl https://anti-api-proxy-production.up.railway.app/v1/chat/completions \
+  -H "Authorization: Bearer ak-YOUR_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "Opus-thinking",
+    "messages": [{"role": "user", "content": "What is the weather in SF?"}],
+    "tools": [{
+      "type": "function",
+      "function": {
+        "name": "get_weather",
+        "description": "Get weather for a location",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "location": {"type": "string"}
+          },
+          "required": ["location"]
+        }
+      }
+    }],
+    "stream": true
+  }'</pre>
+        <div class="tip">
+            <span class="en"><strong>Works with all clients.</strong> Claude Code, OpenClaw, Cursor, and any OpenAI-compatible tool that sends <code>tools</code> in the request body will work natively. The proxy translates tool schemas between OpenAI and Anthropic formats automatically.</span>
+            <span class="cn"><strong>兼容所有客户端。</strong>Claude Code、OpenClaw、Cursor 及任何在请求中发送 <code>tools</code> 的 OpenAI 兼容工具都可直接使用。代理自动在 OpenAI 和 Anthropic 格式之间转换工具 schema。</span>
         </div>
 
         <hr>
