@@ -710,26 +710,32 @@ import { existsSync, statSync, readdirSync, mkdirSync, writeFileSync } from "nod
 
 const RELEASES_DIR = process.env.RELEASES_DIR || "/data/releases"
 
+// Download: redirect to latest GitHub release DMG
+const GITHUB_RELEASE_URL = "https://github.com/aptidus/spear-proxy/releases/download/v1.2.0/SpearAgents-1.2.0-arm64.dmg"
+
 server.get("/download", async (c) => {
+    // First check if we have a local copy on the volume
     try {
-        if (!existsSync(RELEASES_DIR)) return c.json({ error: "No releases available yet" }, 404)
-        const files = readdirSync(RELEASES_DIR).filter((f: string) => f.endsWith(".dmg")).sort().reverse()
-        if (files.length === 0) return c.json({ error: "No releases available yet" }, 404)
-        const latest = files[0]
-        const filePath = RELEASES_DIR + "/" + latest
-        const stat = statSync(filePath)
-        const file = Bun.file(filePath)
-        return new Response(file, {
-            headers: {
-                "Content-Type": "application/octet-stream",
-                "Content-Disposition": `attachment; filename="${latest}"`,
-                "Content-Length": String(stat.size),
-                "Cache-Control": "public, max-age=3600",
-            },
-        })
-    } catch (err: any) {
-        return c.json({ error: err.message }, 500)
-    }
+        if (existsSync(RELEASES_DIR)) {
+            const files = readdirSync(RELEASES_DIR).filter((f: string) => f.endsWith(".dmg")).sort().reverse()
+            if (files.length > 0) {
+                const latest = files[0]
+                const filePath = RELEASES_DIR + "/" + latest
+                const stat = statSync(filePath)
+                const file = Bun.file(filePath)
+                return new Response(file, {
+                    headers: {
+                        "Content-Type": "application/octet-stream",
+                        "Content-Disposition": `attachment; filename="${latest}"`,
+                        "Content-Length": String(stat.size),
+                        "Cache-Control": "public, max-age=3600",
+                    },
+                })
+            }
+        }
+    } catch {}
+    // Fallback: redirect to GitHub release
+    return c.redirect(GITHUB_RELEASE_URL, 302)
 })
 
 server.post("/download/upload", async (c) => {
