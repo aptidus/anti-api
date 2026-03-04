@@ -308,25 +308,32 @@ export async function testAccountModels(
     const results: ModelTestResult[] = []
 
     for (const flow of relevantFlows) {
-        const modelId = flow.name
-        // Find the specific entry for this provider to show what upstream model will be used
+        const flowName = flow.name
+        // Find the specific entry for this provider — this is the ACTUAL model that will be called
         const providerEntry = flow.entries.find(e => e.provider === provider)
+        if (!providerEntry) continue
+
+        // Display the actual upstream model ID, not the flow route name
+        const actualModelId = providerEntry.modelId
         const result: ModelTestResult = {
-            modelId,
+            modelId: actualModelId,
             agentic: false,
             toolCall: false,
             thinking: false,
             latencyMs: 0,
         }
 
+        // Determine thinking capability from the actual model name
+        const modelLower = actualModelId.toLowerCase()
+        result.thinking = modelLower.includes("thinking") || modelLower.includes("pro")
+
         const start = Date.now()
 
         try {
             // Use @provider hint to force routing through the specific provider being tested
-            // e.g., "Opus-thinking@anthropic" forces the router to use only Anthropic entries
-            const modelWithHint = `${modelId}@${provider}`
+            const modelWithHint = `${flowName}@${provider}`
 
-            // Lightweight ping: just verify routing works, don't burn quota with heavy agentic prompts
+            // Lightweight ping: just verify routing works, don't burn quota
             const response = await callProxy({
                 model: modelWithHint,
                 messages: [
@@ -342,7 +349,7 @@ export async function testAccountModels(
             result.agentic = true
             result.latencyMs = Date.now() - start
 
-            // Capture actual upstream routing chain from response headers
+            // Capture upstream routing info from response headers
             if (response._upstream) {
                 result.upstreamModel = response._upstream.model
                 result.upstreamProvider = response._upstream.provider
@@ -353,11 +360,7 @@ export async function testAccountModels(
             const choice = response.choices?.[0]
             result.toolCall = !!choice?.message?.content
 
-            // Infer thinking capability from actual upstream model name or flow route name
-            const checkModel = (result.upstreamModel || modelId).toLowerCase()
-            result.thinking = checkModel.includes("thinking") || checkModel.includes("pro")
-
-            console.log(`[ping] ${modelId} → ${result.upstreamModel || "?"} [${result.upstreamProvider || "?"}] ${result.latencyMs}ms OK`)
+            console.log(`[ping] ${flowName} → ${actualModelId} [${provider}] ${result.latencyMs}ms OK`)
         } catch (error) {
             result.latencyMs = Date.now() - start
             const msg = (error as Error).message || "Unknown error"
@@ -365,10 +368,10 @@ export async function testAccountModels(
             if (msg.startsWith("429")) {
                 result.error = "Rate limited"
                 result.agentic = true // routing worked, just rate-limited
-                console.log(`[ping] ${modelId}@${provider}: 429 rate limited`)
+                console.log(`[ping] ${flowName} → ${actualModelId}: 429 rate limited`)
             } else {
                 result.error = msg.slice(0, 200)
-                console.log(`[ping] ${modelId}@${provider}: ERROR ${result.error}`)
+                console.log(`[ping] ${flowName} → ${actualModelId}: ERROR ${result.error}`)
             }
         }
 

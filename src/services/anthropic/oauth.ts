@@ -163,7 +163,27 @@ export async function completeAnthropicOAuth(
             consola.warn(`[anthropic] Failed to fetch org info:`, profileErr)
         }
 
-        // Also try /v1/me or userinfo endpoint for email
+        // Try OpenID Connect userinfo endpoint (standard OAuth)
+        if (email === "anthropic-user") {
+            try {
+                const userinfoRes = await proxyFetch("https://auth.anthropic.com/userinfo", {
+                    headers: {
+                        "Authorization": `Bearer ${tokenData.access_token}`,
+                    },
+                })
+                const userinfoBody = await userinfoRes.text()
+                consola.info(`[anthropic] userinfo endpoint: ${userinfoRes.status}, body: ${userinfoBody.substring(0, 500)}`)
+                if (userinfoRes.ok) {
+                    const info = JSON.parse(userinfoBody)
+                    if (info.email) email = info.email
+                    else if (info.preferred_username) email = info.preferred_username
+                }
+            } catch {
+                // ignore
+            }
+        }
+
+        // Try /v1/me endpoint
         if (email === "anthropic-user") {
             try {
                 const meRes = await proxyFetch("https://api.anthropic.com/v1/me", {
@@ -178,7 +198,7 @@ export async function completeAnthropicOAuth(
                 if (meRes.ok) {
                     const meData = JSON.parse(meBody)
                     if (meData.email) email = meData.email
-                    if (meData.name) email = meData.name
+                    else if (meData.name) email = meData.name
                 }
             } catch {
                 // ignore
