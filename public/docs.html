@@ -704,6 +704,35 @@ export ANTHROPIC_API_KEY="ak-YOUR_KEY"</pre>
         </div>
 
         <hr>
+
+        <div class="en">
+            <h2>Agentic Mode</h2>
+            <p>Spear Agents fully supports agentic workflows — multi-turn tool use loops where the model calls tools, receives results, and continues reasoning until the task is complete. This is the mode used by Claude Code, OpenClaw, and other AI coding agents.</p>
+            <h3>How It Works</h3>
+            <ul>
+                <li><strong>Multi-turn tool loops:</strong> The model returns <code>stop_reason: "tool_use"</code> (Anthropic) or <code>finish_reason: "tool_calls"</code> (OpenAI) when it wants to call a tool. Your client executes the tool and sends the result back. This loop continues until the model returns <code>end_turn</code> / <code>stop</code>.</li>
+                <li><strong>Interleaved thinking:</strong> When using <code>-thinking</code> models, the model can think between tool calls — reasoning about results before deciding the next action. The proxy supports the <code>interleaved-thinking</code> beta for streaming thinking blocks alongside tool use.</li>
+                <li><strong>Streaming tool calls:</strong> Tool call arguments stream incrementally via <code>fine-grained-tool-streaming</code>, so your client can start parsing tool inputs before the full call is complete.</li>
+                <li><strong>Automatic format translation:</strong> Send tool results in either OpenAI format (<code>tool</code> role messages) or Anthropic format (<code>tool_result</code> content blocks) — the proxy translates between them transparently.</li>
+            </ul>
+        </div>
+        <div class="cn">
+            <h2>Agent 模式</h2>
+            <p>Spear Agents 完全支持 Agent 工作流 — 多轮工具调用循环，模型调用工具、接收结果、继续推理直到任务完成。这是 Claude Code、OpenClaw 等 AI 编程 Agent 使用的模式。</p>
+            <h3>工作原理</h3>
+            <ul>
+                <li><strong>多轮工具循环：</strong>模型返回 <code>stop_reason: "tool_use"</code>（Anthropic）或 <code>finish_reason: "tool_calls"</code>（OpenAI）时表示需要调用工具。客户端执行工具并返回结果，循环继续直到 <code>end_turn</code> / <code>stop</code>。</li>
+                <li><strong>交错思考：</strong>使用 <code>-thinking</code> 模型时，模型可以在工具调用之间思考 — 分析结果后再决定下一步操作。</li>
+                <li><strong>流式工具调用：</strong>工具调用参数通过 <code>fine-grained-tool-streaming</code> 增量流式传输，客户端可以在完整调用完成前开始解析。</li>
+                <li><strong>自动格式转换：</strong>可用 OpenAI 格式（<code>tool</code> 角色消息）或 Anthropic 格式（<code>tool_result</code> 内容块）发送工具结果 — 代理自动转换。</li>
+            </ul>
+        </div>
+        <div class="tip">
+            <span class="en"><strong>Battle-tested.</strong> This is the same infrastructure that powers Spear Agents' own multi-agent system with GM delegation, specialist agents, and complex multi-step workflows. Every agentic feature is production-proven.</span>
+            <span class="cn"><strong>经过实战检验。</strong>这是 Spear Agents 自身多 Agent 系统（GM 委派、专家 Agent、复杂多步工作流）使用的同一基础设施。每个 Agent 功能都经过生产环境验证。</span>
+        </div>
+
+        <hr>
         <p style="text-align:center; color:#555; font-size:12px; margin-top:40px;">
             Spear Agents v1.2.0
         </p>
