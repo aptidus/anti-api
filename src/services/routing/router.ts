@@ -980,13 +980,8 @@ async function* createFlowCompletionStreamWithEntries(request: RoutedRequest, en
 
         recordProviderUsage(entry.modelId, completion)
 
-        if (entry.provider === "codex") {
-            const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
-            console.log(formatSuccessLine({ elapsed, model: entry.modelId, provider: "codex", account: accountDisplay, routeTag: "fr" }))
-        } else if (entry.provider === "copilot") {
-            const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
-            console.log(formatSuccessLine({ elapsed, model: entry.modelId, provider: "copilot", account: accountDisplay, routeTag: "fr" }))
-        }
+        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
+        console.log(formatSuccessLine({ elapsed, model: entry.modelId, provider: entry.provider, account: accountDisplay, routeTag: "fr" }))
     }
 
     for (let index = startIndex; index < entries.length; index++) {
