@@ -792,7 +792,28 @@ async function createAccountCompletionWithEntries(request: RoutedRequest, entrie
     throw new RoutingError(`No account routing entries available for model "${request.model}"`, 400)
 }
 
+/**
+ * Enforce flow-route-only policy: reject model IDs containing digits (version-numbered official model IDs).
+ * Flow route names like "Opus-thinking", "Sonnet-thinking", "Gemini-Pro-High", "Haiku" have no digits.
+ * Internal callers (ping service) bypass this by setting request.internal = true.
+ */
+function enforceFlowRouteOnly(model: string, isInternal?: boolean): void {
+    if (isInternal) return
+    const cleaned = model.replace(/^route:/, "").trim()
+    if (/\d/.test(cleaned)) {
+        const config = loadRoutingConfig()
+        const availableFlows = (config.flows || []).map(f => f.name).filter(Boolean).join(", ")
+        throw new RoutingError(
+            `Model "${model}" is not supported. Only flow route model IDs are accepted (no version numbers). Available: ${availableFlows || "none configured"}`,
+            400
+        )
+    }
+}
+
 export async function createRoutedCompletion(request: RoutedRequest) {
+    // Enforce flow-route-only: reject raw provider model IDs with version numbers
+    enforceFlowRouteOnly(request.model, (request as any).internal)
+
     // Parse @provider hint (e.g., "claude-sonnet-4-5@anthropic")
     const { model: rawModel, providerHint } = parseProviderHint(request.model)
     const normalizedModel = normalizeOfficialModelId(rawModel, providerHint)
@@ -1199,6 +1220,9 @@ async function* createAccountCompletionStreamWithEntries(request: RoutedRequest,
 }
 
 export async function* createRoutedCompletionStream(request: RoutedRequest): AsyncGenerator<string, void, unknown> {
+    // Enforce flow-route-only: reject raw provider model IDs with version numbers
+    enforceFlowRouteOnly(request.model, (request as any).internal)
+
     // Parse @provider hint (e.g., "claude-sonnet-4-5@anthropic")
     const { model: rawModel, providerHint } = parseProviderHint(request.model)
     const normalizedModel = normalizeOfficialModelId(rawModel, providerHint)

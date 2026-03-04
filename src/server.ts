@@ -337,55 +337,15 @@ server.route("/messages", messageRoutes)
 const modelsHandler = (c: any) => {
     const now = new Date().toISOString()
     const routingConfig = loadRoutingConfig()
-    const routeModels = (routingConfig.flows || []).map(flow => ({
-        id: flow.name,
-        name: `Route: ${flow.name}`,
-        owned_by: "routing",
-    }))
 
-    // Collect all models per provider
-    type ModelEntry = { id: string; name: string; provider: string }
-    const allModels: ModelEntry[] = []
-
-    // Antigravity models
-    const hasAntigravityAccounts = accountManager.count() > 0
-    if (hasAntigravityAccounts) {
-        for (const m of AVAILABLE_MODELS) {
-            allModels.push({ id: m.id, name: m.name || m.id, provider: "antigravity" })
-        }
-    }
-
-    // Other providers (anthropic, codex, copilot)
-    for (const provider of ["anthropic", "codex", "copilot"] as const) {
-        const accounts = authStore.listAccounts(provider)
-        if (accounts.length > 0) {
-            const pModels = getProviderModels(provider)
-            for (const m of pModels) {
-                allModels.push({ id: m.id, name: m.label || m.id, provider })
-            }
-        }
-    }
-
-    // Find which model IDs appear in multiple providers (overlapping)
-    const providersByModel = new Map<string, string[]>()
-    for (const m of allModels) {
-        if (!providersByModel.has(m.id)) providersByModel.set(m.id, [])
-        providersByModel.get(m.id)!.push(m.provider)
-    }
-
-    // Build final list: suffix with @provider for overlapping models
-    const models = allModels.map(m => {
-        const providers = providersByModel.get(m.id) || []
-        const isOverlapping = providers.length > 1
-        const suffixedId = isOverlapping ? `${m.id}@${m.provider}` : m.id
-        const displayName = m.name
-        return { id: suffixedId, name: displayName, owned_by: "cloud" }
-    })
-
-    // Add flow routing models at the end
-    for (const rm of routeModels) {
-        models.push(rm)
-    }
+    // Only expose flow route model IDs — no raw provider model IDs with version numbers
+    const models = (routingConfig.flows || [])
+        .filter(flow => flow.name && flow.entries?.length > 0)
+        .map(flow => ({
+            id: flow.name,
+            name: flow.name,
+            owned_by: "spear-proxy",
+        }))
 
     return c.json({
         object: "list",
@@ -395,8 +355,8 @@ const modelsHandler = (c: any) => {
             object: "model",         // OpenAI format
             created_at: now,         // Anthropic format (RFC 3339)
             created: Date.now(),     // OpenAI format (unix timestamp)
-            owned_by: m.owned_by || "unknown",
-            display_name: m.name || m.id,
+            owned_by: m.owned_by,
+            display_name: m.name,
         })),
         has_more: false,
         first_id: models[0]?.id,

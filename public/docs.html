@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Anti-API Documentation</title>
+    <title>Spear Proxy Documentation</title>
     <style>
         * {
             margin: 0;
@@ -125,19 +125,9 @@
             font-weight: 600;
         }
 
-        .badge-claude {
-            background: #3b1d5e;
-            color: #c084fc;
-        }
-
-        .badge-gemini {
-            background: #1a3a2e;
-            color: #6ee7b7;
-        }
-
-        .badge-gpt {
-            background: #2a2a1a;
-            color: #fbbf24;
+        .badge-route {
+            background: #1a2a3e;
+            color: #7dd3fc;
         }
 
         .badge-think {
@@ -145,11 +135,6 @@
             color: #7dd3fc;
             font-size: 10px;
             margin-left: 4px;
-        }
-
-        .badge-anthropic {
-            background: #2d1a3e;
-            color: #d4a5ff;
         }
 
         .tip {
@@ -305,7 +290,7 @@
 <body>
     <div class="container">
 
-        <h1>Anti-API Documentation</h1>
+        <h1>Spear Proxy Documentation</h1>
 
         <div class="lang-toggle">
             <button class="lang-btn active" onclick="setLang('en')">English</button>
@@ -314,15 +299,13 @@
 
         <!-- ============ BASE URL ============ -->
         <div class="en">
-            <p class="subtitle">OpenAI-compatible proxy for Antigravity, Anthropic, Copilot, and Codex models — works
-                with OpenClaw, Claude Code,
+            <p class="subtitle">Multi-provider model proxy with flow routing — works with OpenClaw, Claude Code,
                 Cursor, and any OpenAI-compatible client.</p>
             <h2>Base URL &amp; Authentication</h2>
             <p>All requests use this base URL and require an API key:</p>
         </div>
         <div class="cn">
-            <p class="subtitle">兼容 OpenAI 的多提供商（Antigravity、Anthropic、Copilot、Codex）模型代理 — 适用于 OpenClaw、Claude
-                Code、Cursor 及任何 OpenAI 兼容客户端。</p>
+            <p class="subtitle">多提供商流式路由模型代理 — 适用于 OpenClaw、Claude Code、Cursor 及任何 OpenAI 兼容客户端。</p>
             <h2>基础地址 &amp; 认证</h2>
             <p>所有请求使用以下基础地址，并需要 API 密钥：</p>
         </div>
@@ -331,105 +314,55 @@ API Key:  Authorization: Bearer ak-YOUR_API_KEY</pre>
 
         <!-- ============ MODELS ============ -->
         <div class="en">
-            <h2>Available Models</h2>
+            <h2>Available Models (Flow Routes)</h2>
+            <p>Spear Proxy uses <strong>flow route model IDs</strong> — semantic names without version numbers. Each route maps to upstream provider chains with automatic failover and load balancing.</p>
         </div>
         <div class="cn">
-            <h2>可用模型</h2>
+            <h2>可用模型（流式路由）</h2>
+            <p>Spear Proxy 使用<strong>流式路由模型 ID</strong> — 无版本号的语义名称。每个路由映射到上游提供商链，支持自动故障转移和负载均衡。</p>
         </div>
         <table>
             <thead>
                 <tr>
                     <th>Model ID</th>
-                    <th><span class="en">Provider</span><span class="cn">提供商</span></th>
-                    <th><span class="en">Capabilities</span><span class="cn">特点</span></th>
+                    <th><span class="en">Description</span><span class="cn">描述</span></th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
-                    <td><code>claude-opus-4-6-thinking</code></td>
-                    <td><span class="badge badge-claude">Claude</span></td>
-                    <td><span class="en">Best reasoning</span><span class="cn">最强推理</span> <span
-                            class="badge badge-think">thinking</span></td>
+                    <td><code>Opus-thinking</code></td>
+                    <td><span class="badge badge-route">Flow</span> <span class="en">Most capable reasoning model</span><span class="cn">最强推理模型</span> <span class="badge badge-think">thinking</span></td>
                 </tr>
                 <tr>
-                    <td><code>claude-opus-4-5-thinking</code></td>
-                    <td><span class="badge badge-claude">Claude</span></td>
-                    <td><span class="en">Strong reasoning</span><span class="cn">强推理</span> <span
-                            class="badge badge-think">thinking</span></td>
+                    <td><code>Sonnet-thinking</code></td>
+                    <td><span class="badge badge-route">Flow</span> <span class="en">Fast reasoning model</span><span class="cn">快速推理模型</span> <span class="badge badge-think">thinking</span></td>
                 </tr>
                 <tr>
-                    <td><code>claude-sonnet-4-6-thinking</code></td>
-                    <td><span class="badge badge-claude">Claude</span></td>
-                    <td><span class="en">Fast reasoning</span><span class="cn">快速推理</span> <span
-                            class="badge badge-think">thinking</span></td>
+                    <td><code>Gemini-Pro-High</code></td>
+                    <td><span class="badge badge-route">Flow</span> <span class="en">High quality Gemini</span><span class="cn">高质量 Gemini</span></td>
                 </tr>
                 <tr>
-                    <td><code>claude-sonnet-4-6</code></td>
-                    <td><span class="badge badge-claude">Claude</span></td>
-                    <td><span class="en">Fast, latest</span><span class="cn">快速，最新</span></td>
+                    <td><code>Gemini-Flash-Thinking</code></td>
+                    <td><span class="badge badge-route">Flow</span> <span class="en">Fast Gemini with reasoning</span><span class="cn">快速 Gemini 推理</span> <span class="badge badge-think">thinking</span></td>
                 </tr>
                 <tr>
-                    <td><code>claude-sonnet-4-5-thinking</code></td>
-                    <td><span class="badge badge-claude">Claude</span></td>
-                    <td><span class="en">Balanced reasoning</span><span class="cn">平衡推理</span> <span
-                            class="badge badge-think">thinking</span></td>
-                </tr>
-                <tr>
-                    <td><code>claude-sonnet-4-5</code></td>
-                    <td><span class="badge badge-claude">Claude</span></td>
-                    <td><span class="en">Balanced</span><span class="cn">平衡性能</span></td>
-                </tr>
-                <tr>
-                    <td><code>claude-sonnet-4</code></td>
-                    <td><span class="badge badge-claude">Claude</span></td>
-                    <td><span class="en">Efficient coding</span><span class="cn">高效编码</span></td>
-                </tr>
-                <tr>
-                    <td><code>claude-haiku-4-5</code></td>
-                    <td><span class="badge badge-claude">Claude</span></td>
-                    <td><span class="en">Ultra-fast, lightweight</span><span class="cn">极速轻量</span></td>
-                </tr>
-                <tr>
-                    <td><code>gemini-3-1-pro-high</code></td>
-                    <td><span class="badge badge-gemini">Gemini</span></td>
-                    <td><span class="en">Latest Gemini, highest quality</span><span class="cn">最新 Gemini，最高质量</span>
-                    </td>
-                </tr>
-                <tr>
-                    <td><code>gemini-3-pro-high</code></td>
-                    <td><span class="badge badge-gemini">Gemini</span></td>
-                    <td><span class="en">High quality</span><span class="cn">高质量</span></td>
-                </tr>
-                <tr>
-                    <td><code>gemini-3-pro-low</code></td>
-                    <td><span class="badge badge-gemini">Gemini</span></td>
-                    <td><span class="en">Efficient</span><span class="cn">高效</span></td>
-                </tr>
-                <tr>
-                    <td><code>gemini-3-flash</code></td>
-                    <td><span class="badge badge-gemini">Gemini</span></td>
-                    <td><span class="en">Ultra-fast</span><span class="cn">极速</span></td>
-                </tr>
-                <tr>
-                    <td><code>gemini-3-flash-thinking</code></td>
-                    <td><span class="badge badge-gemini">Gemini</span></td>
-                    <td><span class="en">Fast reasoning</span><span class="cn">快速推理</span> <span
-                            class="badge badge-think">thinking</span></td>
-                </tr>
-                <tr>
-                    <td><code>gpt-oss-120b</code></td>
-                    <td><span class="badge badge-gpt">GPT</span></td>
-                    <td><span class="en">Open-source, large</span><span class="cn">开源大模型</span></td>
+                    <td><code>Haiku</code></td>
+                    <td><span class="badge badge-route">Flow</span> <span class="en">Ultra-fast, lightweight</span><span class="cn">极速轻量</span></td>
                 </tr>
             </tbody>
         </table>
+
+        <div class="warn">
+            <span class="en"><strong>Important:</strong> Only flow route model IDs (no version numbers) are supported. Raw provider model IDs like <code>claude-opus-4-6-thinking</code> or <code>claude-sonnet-4-5</code> will be rejected with a 400 error. Use <code>GET /v1/models</code> to see all available routes.</span>
+            <span class="cn"><strong>重要：</strong>仅支持流式路由模型 ID（无版本号）。原始提供商模型 ID（如 <code>claude-opus-4-6-thinking</code> 或 <code>claude-sonnet-4-5</code>）将返回 400 错误。使用 <code>GET /v1/models</code> 查看所有可用路由。</span>
+        </div>
 
         <hr>
 
         <!-- ============ OPENCLAW SETUP ============ -->
         <div class="en">
-            <h2>🦞 OpenClaw Setup (Step-by-Step)</h2>
-            <p>Follow these steps to connect OpenClaw to Anti-API:</p>
+            <h2>OpenClaw Setup (Step-by-Step)</h2>
+            <p>Follow these steps to connect OpenClaw to Spear Proxy:</p>
 
             <div class="step">
                 <span class="step-num">1</span><strong>Install OpenClaw</strong> (if not already installed)
@@ -444,24 +377,23 @@ API Key:  Authorization: Bearer ak-YOUR_API_KEY</pre>
             </div>
 
             <div class="step">
-                <span class="step-num">3</span><strong>Add the Anti-API provider</strong>
+                <span class="step-num">3</span><strong>Add the Spear Proxy provider</strong>
                 <p>Paste this into your <code>openclaw.json</code>. Replace <code>ak-YOUR_KEY</code> with your actual
                     API key:</p>
                 <pre>{
   "models": {
     "mode": "merge",
     "providers": {
-      "anti-api": {
+      "spear-proxy": {
         "baseUrl": "https://anti-api-proxy-production.up.railway.app/v1",
         "apiKey": "ak-YOUR_KEY",
         "api": "openai-completions",
         "models": [
-          { "id": "claude-opus-4-6-thinking", "name": "Claude Opus 4.6 Thinking", "reasoning": true },
-          { "id": "claude-opus-4-5-thinking", "name": "Claude Opus 4.5 Thinking", "reasoning": true },
-          { "id": "claude-sonnet-4-6", "name": "Claude Sonnet 4.6" },
-          { "id": "claude-sonnet-4-5", "name": "Claude Sonnet 4.5" },
-          { "id": "gemini-3-1-pro-high", "name": "Gemini 3.1 Pro High" },
-          { "id": "gemini-3-flash", "name": "Gemini 3 Flash" }
+          { "id": "Opus-thinking", "name": "Opus Thinking", "reasoning": true },
+          { "id": "Sonnet-thinking", "name": "Sonnet Thinking", "reasoning": true },
+          { "id": "Gemini-Pro-High", "name": "Gemini Pro High" },
+          { "id": "Gemini-Flash-Thinking", "name": "Gemini Flash Thinking", "reasoning": true },
+          { "id": "Haiku", "name": "Haiku" }
         ]
       }
     }
@@ -469,7 +401,7 @@ API Key:  Authorization: Bearer ak-YOUR_API_KEY</pre>
   "agents": {
     "defaults": {
       "model": {
-        "primary": "anti-api/claude-opus-4-6-thinking"
+        "primary": "spear-proxy/Opus-thinking"
       }
     }
   }
@@ -484,18 +416,18 @@ API Key:  Authorization: Bearer ak-YOUR_API_KEY</pre>
             <div class="step">
                 <span class="step-num">5</span><strong>Verify it works</strong>
                 <pre>openclaw agent --local -m "Hello, what model are you?" --session-id test --json</pre>
-                <p>You should see <code>"provider": "anti-api"</code> in the output.</p>
+                <p>You should see <code>"provider": "spear-proxy"</code> in the output.</p>
             </div>
 
             <div class="tip">
-                <strong>✅ Tools work natively.</strong> OpenClaw's built-in tools (file read/write, web search, process,
-                etc.) work out of the box with all Anti-API models — no extra configuration needed.
+                <strong>Tools work natively.</strong> OpenClaw's built-in tools (file read/write, web search, process,
+                etc.) work out of the box with all Spear Proxy models — no extra configuration needed.
             </div>
         </div>
 
         <div class="cn">
-            <h2>🦞 OpenClaw 配置教程（分步指南）</h2>
-            <p>按以下步骤将 OpenClaw 连接到 Anti-API：</p>
+            <h2>OpenClaw 配置教程（分步指南）</h2>
+            <p>按以下步骤将 OpenClaw 连接到 Spear Proxy：</p>
 
             <div class="step">
                 <span class="step-num">1</span><strong>安装 OpenClaw</strong>（如果尚未安装）
@@ -509,23 +441,22 @@ API Key:  Authorization: Bearer ak-YOUR_API_KEY</pre>
             </div>
 
             <div class="step">
-                <span class="step-num">3</span><strong>添加 Anti-API 提供商</strong>
+                <span class="step-num">3</span><strong>添加 Spear Proxy 提供商</strong>
                 <p>将以下内容粘贴到 <code>openclaw.json</code> 中，将 <code>ak-YOUR_KEY</code> 替换为你的 API 密钥：</p>
                 <pre>{
   "models": {
     "mode": "merge",
     "providers": {
-      "anti-api": {
+      "spear-proxy": {
         "baseUrl": "https://anti-api-proxy-production.up.railway.app/v1",
         "apiKey": "ak-YOUR_KEY",
         "api": "openai-completions",
         "models": [
-          { "id": "claude-opus-4-6-thinking", "name": "Claude Opus 4.6 Thinking", "reasoning": true },
-          { "id": "claude-opus-4-5-thinking", "name": "Claude Opus 4.5 Thinking", "reasoning": true },
-          { "id": "claude-sonnet-4-6", "name": "Claude Sonnet 4.6" },
-          { "id": "claude-sonnet-4-5", "name": "Claude Sonnet 4.5" },
-          { "id": "gemini-3-1-pro-high", "name": "Gemini 3.1 Pro High" },
-          { "id": "gemini-3-flash", "name": "Gemini 3 Flash" }
+          { "id": "Opus-thinking", "name": "Opus Thinking", "reasoning": true },
+          { "id": "Sonnet-thinking", "name": "Sonnet Thinking", "reasoning": true },
+          { "id": "Gemini-Pro-High", "name": "Gemini Pro High" },
+          { "id": "Gemini-Flash-Thinking", "name": "Gemini Flash Thinking", "reasoning": true },
+          { "id": "Haiku", "name": "Haiku" }
         ]
       }
     }
@@ -533,7 +464,7 @@ API Key:  Authorization: Bearer ak-YOUR_API_KEY</pre>
   "agents": {
     "defaults": {
       "model": {
-        "primary": "anti-api/claude-opus-4-6-thinking"
+        "primary": "spear-proxy/Opus-thinking"
       }
     }
   }
@@ -548,11 +479,11 @@ API Key:  Authorization: Bearer ak-YOUR_API_KEY</pre>
             <div class="step">
                 <span class="step-num">5</span><strong>验证是否生效</strong>
                 <pre>openclaw agent --local -m "Hello, what model are you?" --session-id test --json</pre>
-                <p>输出中应包含 <code>"provider": "anti-api"</code>。</p>
+                <p>输出中应包含 <code>"provider": "spear-proxy"</code>。</p>
             </div>
 
             <div class="tip">
-                <strong>✅ 工具原生支持。</strong>OpenClaw 内置工具（文件读写、网页搜索、进程管理等）可直接使用，无需额外配置。
+                <strong>工具原生支持。</strong>OpenClaw 内置工具（文件读写、网页搜索、进程管理等）可直接使用，无需额外配置。
             </div>
         </div>
 
@@ -560,8 +491,8 @@ API Key:  Authorization: Bearer ak-YOUR_API_KEY</pre>
 
         <!-- ============ CLAUDE CODE SETUP ============ -->
         <div class="en">
-            <h2>🤖 Claude Code Setup (Step-by-Step)</h2>
-            <p>Follow these steps to connect Claude Code to Anti-API:</p>
+            <h2>Claude Code Setup (Step-by-Step)</h2>
+            <p>Follow these steps to connect Claude Code to Spear Proxy:</p>
 
             <div class="step">
                 <span class="step-num">1</span><strong>Install Claude Code</strong> (if not already installed)
@@ -579,8 +510,8 @@ export ANTHROPIC_API_KEY="ak-YOUR_KEY"</pre>
 
             <div class="step">
                 <span class="step-num">3</span><strong>Set your preferred model</strong>
-                <pre>claude config set --global model claude-opus-4-6-thinking</pre>
-                <p>Or use any model from the list above.</p>
+                <pre>claude config set --global model Opus-thinking</pre>
+                <p>Or use any flow route model ID from the table above.</p>
             </div>
 
             <div class="step">
@@ -596,7 +527,7 @@ export ANTHROPIC_API_KEY="ak-YOUR_KEY"</pre>
             </div>
 
             <div class="tip">
-                <strong>✅ All Claude Code tools work.</strong> File editing, bash commands, web search — everything
+                <strong>All Claude Code tools work.</strong> File editing, bash commands, web search — everything
                 works through the proxy exactly as with a native Anthropic API key.
             </div>
 
@@ -607,8 +538,8 @@ export ANTHROPIC_API_KEY="ak-YOUR_KEY"</pre>
         </div>
 
         <div class="cn">
-            <h2>🤖 Claude Code 配置教程（分步指南）</h2>
-            <p>按以下步骤将 Claude Code 连接到 Anti-API：</p>
+            <h2>Claude Code 配置教程（分步指南）</h2>
+            <p>按以下步骤将 Claude Code 连接到 Spear Proxy：</p>
 
             <div class="step">
                 <span class="step-num">1</span><strong>安装 Claude Code</strong>（如果尚未安装）
@@ -626,8 +557,8 @@ export ANTHROPIC_API_KEY="ak-YOUR_KEY"</pre>
 
             <div class="step">
                 <span class="step-num">3</span><strong>设置首选模型</strong>
-                <pre>claude config set --global model claude-opus-4-6-thinking</pre>
-                <p>也可以使用上方模型列表中的任何模型。</p>
+                <pre>claude config set --global model Opus-thinking</pre>
+                <p>也可以使用上方模型列表中的任何流式路由模型 ID。</p>
             </div>
 
             <div class="step">
@@ -643,7 +574,7 @@ export ANTHROPIC_API_KEY="ak-YOUR_KEY"</pre>
             </div>
 
             <div class="tip">
-                <strong>✅ 所有工具都可用。</strong>文件编辑、bash 命令、网页搜索 — 通过代理使用与原生 Anthropic API 完全相同。
+                <strong>所有工具都可用。</strong>文件编辑、bash 命令、网页搜索 — 通过代理使用与原生 Anthropic API 完全相同。
             </div>
 
             <div class="warn">
@@ -656,11 +587,11 @@ export ANTHROPIC_API_KEY="ak-YOUR_KEY"</pre>
 
         <!-- ============ OTHER TOOLS ============ -->
         <div class="en">
-            <h2>🔧 Cursor / Continue.dev / Other Tools</h2>
+            <h2>Cursor / Continue.dev / Other Tools</h2>
             <p>Any tool with "OpenAI-compatible" or "Custom OpenAI" support works. Use these settings:</p>
         </div>
         <div class="cn">
-            <h2>🔧 Cursor / Continue.dev / 其他工具</h2>
+            <h2>Cursor / Continue.dev / 其他工具</h2>
             <p>任何支持 "OpenAI 兼容" 的工具都可以使用。设置如下：</p>
         </div>
         <table>
@@ -678,7 +609,7 @@ export ANTHROPIC_API_KEY="ak-YOUR_KEY"</pre>
             </tr>
             <tr>
                 <td>Model</td>
-                <td><code>claude-opus-4-6-thinking</code></td>
+                <td><code>Opus-thinking</code></td>
             </tr>
         </table>
 
@@ -697,7 +628,7 @@ export ANTHROPIC_API_KEY="ak-YOUR_KEY"</pre>
   -H "Authorization: Bearer ak-YOUR_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "claude-opus-4-6-thinking",
+    "model": "Opus-thinking",
     "messages": [{"role": "user", "content": "Hello!"}],
     "max_tokens": 1024,
     "stream": false
@@ -712,18 +643,18 @@ export ANTHROPIC_API_KEY="ak-YOUR_KEY"</pre>
 
         <h3>GET /v1/models</h3>
         <div class="en">
-            <p>Returns a list of all available models.</p>
+            <p>Returns a list of all available flow route model IDs.</p>
         </div>
         <div class="cn">
-            <p>返回所有可用模型列表。</p>
+            <p>返回所有可用的流式路由模型 ID 列表。</p>
         </div>
 
-        <h3>POST /messages</h3>
+        <h3>POST /v1/messages</h3>
         <div class="en">
-            <p>Anthropic Messages API format (used by Claude Code).</p>
+            <p>Anthropic Messages API format (used by Claude Code). Use <code>x-api-key</code> header for authentication.</p>
         </div>
         <div class="cn">
-            <p>Anthropic Messages API 格式（Claude Code 使用）。</p>
+            <p>Anthropic Messages API 格式（Claude Code 使用）。使用 <code>x-api-key</code> 头认证。</p>
         </div>
 
         <hr>
@@ -745,7 +676,7 @@ export ANTHROPIC_API_KEY="ak-YOUR_KEY"</pre>
 
         <hr>
         <p style="text-align:center; color:#555; font-size:12px; margin-top:40px;">
-            Anti-API v2.6.0
+            Spear Proxy v2.7.0
         </p>
 
     </div>
