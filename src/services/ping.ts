@@ -325,7 +325,11 @@ export async function testAccountModels(
 
         // Determine thinking capability from the actual model name
         const modelLower = actualModelId.toLowerCase()
-        result.thinking = modelLower.includes("thinking") || modelLower.includes("pro")
+        result.thinking = modelLower.includes("thinking")
+            || modelLower.includes("pro")
+            || modelLower.includes("codex")  // Codex models have reasoning/thinking
+            || modelLower.includes("-high")  // high reasoning effort = thinking
+            || modelLower.includes("-max")   // max reasoning effort = thinking
 
         const start = Date.now()
 
