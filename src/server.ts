@@ -745,6 +745,26 @@ server.post("/download/upload", async (c) => {
     }
 })
 
+
+// Fetch DMG from external URL and save to volume (for large files that exceed upload limits)
+server.post("/download/fetch", async (c) => {
+    try {
+        if (!existsSync(RELEASES_DIR)) mkdirSync(RELEASES_DIR, { recursive: true })
+        const { url, filename } = await c.req.json()
+        if (!url || !filename) return c.json({ error: "url and filename required" }, 400)
+        console.log("[Download] Fetching " + url + " -> " + filename)
+        const resp = await fetch(url)
+        if (!resp.ok) return c.json({ error: "Fetch failed: " + resp.status }, 502)
+        const buf = await resp.arrayBuffer()
+        writeFileSync(RELEASES_DIR + "/" + filename, Buffer.from(buf))
+        const stat = statSync(RELEASES_DIR + "/" + filename)
+        console.log("[Download] Saved " + filename + " (" + stat.size + " bytes)")
+        return c.json({ ok: true, filename, size: stat.size })
+    } catch (err: any) {
+        return c.json({ error: err.message }, 500)
+    }
+})
+
 server.get("/download/releases", (c) => {
     try {
         if (!existsSync(RELEASES_DIR)) return c.json({ releases: [] })
