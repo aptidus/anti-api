@@ -719,7 +719,7 @@ import { existsSync, statSync, readdirSync, mkdirSync, writeFileSync } from "nod
 const RELEASES_DIR = process.env.RELEASES_DIR || "/data/releases"
 
 // Download: redirect to latest GitHub release DMG
-const GITHUB_RELEASE_URL = "https://github.com/aptidus/spear-proxy/releases/download/v1.2.0/SpearAgents-1.2.0-arm64.dmg"
+const GITHUB_RELEASE_URL = "https://github.com/aptidus/spear-proxy/releases/download/v1.2.0/SpearAgents-1.2.1-arm64.dmg"
 
 server.get("/download", async (c) => {
     // First check if we have a local copy on the volume
