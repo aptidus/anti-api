@@ -75,7 +75,7 @@ if (API_SECRET) {
         const path = c.req.path
 
         // Always public
-        if (path === "/health" || path === "/oauth-callback" || path.startsWith("/download")) {
+        if (path === "/health" || path === "/oauth-callback" || path.startsWith("/download") || path === "/docs.html") {
             return next()
         }
 
@@ -384,6 +384,15 @@ server.get("/quota", async (c) => {
     } catch (error) {
         return c.text("Quota dashboard not found", 404)
     }
+})
+
+// Public: list available flow route model IDs (no auth required)
+server.get("/download/models", (c) => {
+    const routingConfig = loadRoutingConfig()
+    const flows = (routingConfig.flows || [])
+        .filter((flow: any) => flow.name && flow.entries?.length > 0)
+        .map((flow: any) => ({ id: flow.name, entries: flow.entries.length }))
+    return c.json({ flows })
 })
 
 // API Documentation Page

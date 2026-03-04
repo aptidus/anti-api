@@ -328,27 +328,8 @@ API Key:  Authorization: Bearer ak-YOUR_API_KEY</pre>
                     <th><span class="en">Description</span><span class="cn">描述</span></th>
                 </tr>
             </thead>
-            <tbody>
-                <tr>
-                    <td><code>Opus-thinking</code></td>
-                    <td><span class="badge badge-route">Flow</span> <span class="en">Most capable reasoning model</span><span class="cn">最强推理模型</span> <span class="badge badge-think">thinking</span></td>
-                </tr>
-                <tr>
-                    <td><code>Sonnet-thinking</code></td>
-                    <td><span class="badge badge-route">Flow</span> <span class="en">Fast reasoning model</span><span class="cn">快速推理模型</span> <span class="badge badge-think">thinking</span></td>
-                </tr>
-                <tr>
-                    <td><code>Gemini-Pro-High</code></td>
-                    <td><span class="badge badge-route">Flow</span> <span class="en">High quality Gemini</span><span class="cn">高质量 Gemini</span></td>
-                </tr>
-                <tr>
-                    <td><code>Gemini-Flash-Thinking</code></td>
-                    <td><span class="badge badge-route">Flow</span> <span class="en">Fast Gemini with reasoning</span><span class="cn">快速 Gemini 推理</span> <span class="badge badge-think">thinking</span></td>
-                </tr>
-                <tr>
-                    <td><code>Haiku</code></td>
-                    <td><span class="badge badge-route">Flow</span> <span class="en">Ultra-fast, lightweight</span><span class="cn">极速轻量</span></td>
-                </tr>
+            <tbody id="flow-routes-body">
+                <tr><td colspan="2" style="color:#666">Loading flow routes...</td></tr>
             </tbody>
         </table>
 
@@ -695,6 +676,31 @@ export ANTHROPIC_API_KEY="ak-YOUR_KEY"</pre>
         }
         // Default: English
         setLang('en');
+    </script>
+
+    <script>
+        // Dynamically load flow route model IDs from server
+        (async function() {
+            try {
+                const resp = await fetch('/download/models');
+                const data = await resp.json();
+                const tbody = document.getElementById('flow-routes-body');
+                if (data.flows && data.flows.length > 0) {
+                    tbody.innerHTML = data.flows.map(f => {
+                        const isThinking = f.id.toLowerCase().includes('thinking');
+                        const thinkBadge = isThinking ? ' <span class="badge badge-think">thinking</span>' : '';
+                        return '<tr>' +
+                            '<td><code>' + f.id + '</code></td>' +
+                            '<td><span class="badge badge-route">Flow</span> ' + f.entries + ' provider' + (f.entries > 1 ? 's' : '') + thinkBadge + '</td>' +
+                            '</tr>';
+                    }).join('');
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="2" style="color:#666">No flow routes configured yet</td></tr>';
+                }
+            } catch(e) {
+                console.error('Failed to load flow routes:', e);
+            }
+        })();
     </script>
 </body>
 
