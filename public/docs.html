@@ -334,7 +334,7 @@ API Key:  Authorization: Bearer ak-YOUR_API_KEY</pre>
         </table>
 
         <div class="warn">
-            <span class="en"><strong>Important:</strong> Only flow route model IDs (no version numbers) are supported. Raw provider model IDs like <code>claude-opus-4-6-thinking</code> or <code>claude-sonnet-4-5</code> will be rejected with a 400 error. Use <code>GET /v1/models</code> to see all available routes.</span>
+            <span class="en"><strong>Important:</strong> Only flow route model IDs (no version numbers) are supported. Raw provider model IDs like <code>claude-opus-4-6-thinking</code> or <code>o3-mini</code> will be rejected with a 400 error. Use <code>GET /v1/models</code> to see all available routes.</span>
             <span class="cn"><strong>重要：</strong>仅支持流式路由模型 ID（无版本号）。原始提供商模型 ID（如 <code>claude-opus-4-6-thinking</code> 或 <code>claude-sonnet-4-5</code>）将返回 400 错误。使用 <code>GET /v1/models</code> 查看所有可用路由。</span>
         </div>
 
@@ -372,9 +372,9 @@ API Key:  Authorization: Bearer ak-YOUR_API_KEY</pre>
         "models": [
           { "id": "Opus-thinking", "name": "Opus Thinking", "reasoning": true },
           { "id": "Sonnet-thinking", "name": "Sonnet Thinking", "reasoning": true },
-          { "id": "Gemini-Pro-High", "name": "Gemini Pro High" },
-          { "id": "Gemini-Flash-Thinking", "name": "Gemini Flash Thinking", "reasoning": true },
-          { "id": "Haiku", "name": "Haiku" }
+          { "id": "Haiku", "name": "Haiku" },
+          { "id": "Codex", "name": "Codex" },
+          { "id": "Codex-Mini", "name": "Codex Mini" }
         ]
       }
     }
@@ -435,9 +435,9 @@ API Key:  Authorization: Bearer ak-YOUR_API_KEY</pre>
         "models": [
           { "id": "Opus-thinking", "name": "Opus Thinking", "reasoning": true },
           { "id": "Sonnet-thinking", "name": "Sonnet Thinking", "reasoning": true },
-          { "id": "Gemini-Pro-High", "name": "Gemini Pro High" },
-          { "id": "Gemini-Flash-Thinking", "name": "Gemini Flash Thinking", "reasoning": true },
-          { "id": "Haiku", "name": "Haiku" }
+          { "id": "Haiku", "name": "Haiku" },
+          { "id": "Codex", "name": "Codex" },
+          { "id": "Codex-Mini", "name": "Codex Mini" }
         ]
       }
     }
